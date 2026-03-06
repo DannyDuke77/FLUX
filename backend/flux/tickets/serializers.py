@@ -38,6 +38,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'title', 
             'description', 
             'assigned_to',
+            'department',
             'department_name', 
             'assigned_to_dept_name', 
             'created_by_name', 
@@ -74,3 +75,8 @@ class TicketSerializer(serializers.ModelSerializer):
 
         def create(self, validated_data):
             return super().create(validated_data)
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        fields = ['id', 'name']

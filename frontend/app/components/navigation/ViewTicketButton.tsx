@@ -6,7 +6,7 @@ interface ViewTicketButtonProps {
     ticket: TicketType;
 }
 
-const ViewTicketButton = ({ ticket }: ViewTicketButtonProps) => {
+const ViewTicketButton: React.FC<ViewTicketButtonProps> = ({ ticket }) => {
     const ticketModal = useTicketDetailModal();
 
     return (

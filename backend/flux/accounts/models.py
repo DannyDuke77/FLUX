@@ -46,7 +46,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=150, unique=True)
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
-    department = models.ForeignKey(Department, on_delete=models.PROTECT)
+    department = models.ForeignKey(Department, on_delete=models.PROTECT, null=True)
 
     is_admin = models.BooleanField(default=False)
 

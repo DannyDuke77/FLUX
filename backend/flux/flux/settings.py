@@ -25,9 +25,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", default="0")
+DEBUG = os.environ.get("DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ") + ["tickets.local"]
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -38,23 +38,24 @@ WEBSITE_URL = os.environ.get("WEBSITE_URL")
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': False, # Change to True in production
-    'BLACKLIST_AFTER_ROTATION': False, # Change to True in production
+
+    'AUTH_COOKIE_SECURE': not DEBUG,
+
+    'ROTATE_REFRESH_TOKENS': not DEBUG,
+    'BLACKLIST_AFTER_ROTATION': not DEBUG,
+
     'UPDATE_LAST_LOGIN': True,
     'SIGNING_KEY': os.environ.get("SECRET_KEY"),
     'ALGORITHM': 'HS512',
 }
 
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_SIGNUP_FIELDS = {
-    'email': {'required': True},
-    'password1': {'required': True},
-    'password2': {'required': True},
-}
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_SIGNUP_FIELDS = {} 
+
 ACCOUNT_EMAIL_VERIFICATION = 'none'
-ACCOUNT_EMAIL_REQUIRED = False
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -65,16 +66,30 @@ REST_FRAMEWORK = {
     )
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://127.0.0.1:3000",
-]
+def get_list(env_var):
+    value = os.getenv(env_var, "")
+    return [item.strip() for item in value.split(",") if item.strip()]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = get_list("CORS_ALLOWED_ORIGINS")
+CSRF_TRUSTED_ORIGINS = get_list("CSRF_TRUSTED_ORIGINS") + ["https://tickets.local"]
+
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+CORS_ALLOW_CREDENTIALS = True
+
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = not DEBUG
 
 REST_AUTH = {
     'USE_JWT': True,
-    'JWT_AUTH_HTTPONLY': False, # Change to True in production
+    'JWT_AUTH_HTTPONLY': True,
+    'JWT_AUTH_SECURE': not DEBUG,
+    'JWT_AUTH_SAMESITE': 'Lax',
+    'USER_DETAILS_SERIALIZER': 'accounts.serializers.UserDetailSerializer',
+    'REGISTER_SERIALIZER': 'accounts.serializers.CustomRegisterSerializer',
 }
 
 AUTHENTICATION_BACKENDS = (
@@ -87,9 +102,21 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 }
 
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],
+        },
+    },
+}
+
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -145,6 +172,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'flux.wsgi.application'
+ASGI_APPLICATION = 'flux.asgi.application'
 
 
 # Database
@@ -199,6 +227,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'

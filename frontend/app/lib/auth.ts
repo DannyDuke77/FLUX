@@ -9,6 +9,7 @@ export type AuthUser = {
   email: string
   is_admin: boolean
   department: string
+  department_id: string
   exp: number
 }
 
@@ -21,7 +22,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
     try {
         const decoded: any = jwtDecode(token)
 
-        console.log('Decoded department:', decoded.department)
+        if (DEBUG) console.log('Decoded department:', decoded.department)
 
         // Check if token is expired
         if (decoded.exp * 1000 < Date.now()) return null
@@ -37,6 +38,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
             email: decoded.email,
             is_admin: decoded.is_admin,
             department: decoded.department,
+            department_id: decoded.department_id,
             exp: decoded.exp,
         }
     } catch {

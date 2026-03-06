@@ -18,6 +18,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
         token['is_admin'] = user.is_admin
         token['department'] = user.department.name
+        token['department_id'] = str(user.department.id)
         token["sub"] = str(user.id)
 
         return token
@@ -72,7 +73,11 @@ class CustomRegisterSerializer(RegisterSerializer):
         return user
     
 class UserDetailSerializer(serializers.ModelSerializer):
+    department_id = serializers.SerializerMethodField()
+
+    def get_department_id(self, obj):
+        return obj.department.id
     
     class Meta:
         model = User
-        fields = ('id', 'name', 'email', 'phone_number', 'department')
+        fields = ('id', 'name', 'email', 'phone_number', 'department', 'department_id', 'is_admin')

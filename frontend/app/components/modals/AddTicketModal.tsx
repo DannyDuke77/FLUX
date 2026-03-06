@@ -15,6 +15,8 @@ import {
     Clock
 } from "lucide-react";
 
+const DEBUG = process.env.NODE_ENV !== 'production';
+
 const AddTicketModal = () => {
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(false);
@@ -35,7 +37,7 @@ const AddTicketModal = () => {
             const response = await apiService.get('/api/departments/');
             setDepartments(Array.isArray(response) ? response : response.results || []);
         } catch (error) {
-            console.error("Error fetching departments:", error);
+            if (DEBUG) console.error("Error fetching departments:", error);
         }
     }
 
@@ -45,7 +47,7 @@ const AddTicketModal = () => {
         }
     }, [addTicketModal.isOpen]);
 
-    const submitTicket = async (e: React.FormEvent) => {
+    const submitTicket = async (e: React.MouseEvent) => {
         e.preventDefault();
         setLoading(true);
         setErrors({});
@@ -75,7 +77,7 @@ const AddTicketModal = () => {
                     setSuccess(false);
                 }, 1500);
             } else {
-                setErrors(response.errors || { non_field_errors: ["Failed to create ticket."] });
+                setErrors(response || { non_field_errors: ["Failed to create ticket."] });
             }
         } catch (error) {
             setErrors({ non_field_errors: ["A network error occurred. Please try again."] });
@@ -85,7 +87,7 @@ const AddTicketModal = () => {
     }
 
     const content = (
-        <form onSubmit={submitTicket} className="space-y-6 py-2">
+        <form className="space-y-6 py-2">
             {/* Success State */}
             {success && (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
@@ -186,6 +188,7 @@ const AddTicketModal = () => {
                     Cancel
                 </button>
                 <button 
+                    onClick={submitTicket}
                     type="submit"
                     disabled={loading || success}
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 font-bold"

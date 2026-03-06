@@ -30,3 +30,5 @@ ReportLab==4.4.9         # PDF generation library
 # WebSockets support
 channels==4.3.2
 daphne==4.2.1
+channels-redis==4.3.0
+gunicorn==25.1.0

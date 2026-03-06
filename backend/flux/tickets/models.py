@@ -3,6 +3,9 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 from accounts.models import Department
 import random
 
@@ -28,17 +31,13 @@ class Ticket(models.Model):
         HIGH = 'high', 'High'
         CRITICAL = 'critical', 'Critical'
 
-    # Primary key
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    # Human-readable unique ticket number
     ticket_number = models.CharField(max_length=20, unique=True, editable=False)
-
-    # Core ticket info
     title = models.CharField(max_length=255)
     description = models.TextField()
 
-    # Department that raised the ticket (auto-filled)
+    # Department that raised the ticket
     department = models.ForeignKey(
         Department,
         on_delete=models.PROTECT,
@@ -46,34 +45,35 @@ class Ticket(models.Model):
         editable=False
     )
 
-    # Department assigned to handle the ticket (required)
+    # Department assigned to handle the ticket
     assigned_to = models.ForeignKey(
         Department,
         on_delete=models.PROTECT,
         related_name='tickets_assigned'
     )
 
-    # User who created the ticket
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='tickets_created'
     )
 
-    # Ticket status and priority
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
     priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
 
-    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"[{self.department.name}] {self.title} ({self.status})"
 
+    class Meta:
+        ordering = ['-created_at']
+        
     def save(self, *args, **kwargs):
-        # 1. Check if this is an update or a new creation
-        if self.pk:
+        is_new = not Ticket.objects.filter(pk=self.pk).exists() if self.pk else True
+
+        if not is_new:
             try:
                 previous = Ticket.objects.get(pk=self.pk)
                 if previous.status != self.status:
@@ -86,18 +86,33 @@ class Ticket(models.Model):
                     )
             except Ticket.DoesNotExist:
                 pass
-        
-        if not self.pk and self.created_by:
-            self.department = self.created_by.department
 
-        if not self.ticket_number:
-            while True:
-                number = generate_ticket_number()
-                if not Ticket.objects.filter(ticket_number=number).exists():
-                    self.ticket_number = number
-                    break
-        
+        if is_new:
+            if self.created_by and not hasattr(self, 'department'):
+                self.department = self.created_by.department
+                
+            if not self.ticket_number:
+                while True:
+                    number = generate_ticket_number()
+                    if not Ticket.objects.filter(ticket_number=number).exists():
+                        self.ticket_number = number
+                        break
+
         super().save(*args, **kwargs)
+
+        # WebSocket Broadcast
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    "tickets_updates",
+                    {
+                        "type": "ticket_update",
+                        "data": {"action": "saved", "ticket_id": str(self.id)}
+                    }
+                )
+        except Exception as e:
+            print(f"WS Error: {e}")
 
 class TicketStatusLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

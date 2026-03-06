@@ -18,13 +18,13 @@ import {
   Home,
   User
 } from "lucide-react"
+import ReportsButton from "./ReportsButton";
 
 interface AppSidebarProps {
   appUser: any
 }
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Tickets", href: "/tickets", icon: Ticket },
   { label: "Register User", href: "/auth/register", icon: User },
 ];
@@ -230,6 +230,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ appUser }) => {
                 </Link>
               );
             })}
+            <ReportsButton user={appUser} />
           </nav>
         </div>
 

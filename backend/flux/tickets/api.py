@@ -5,13 +5,17 @@ from rest_framework.response import Response
 from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.validators import ValidationError
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils.dateparse import parse_date
 from django.db.models import Q
-
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from django.shortcuts import get_object_or_404
 
 from .models import Ticket
 from accounts.models import Department
 from .serializers import TicketSerializer, DepartmentSerializer
+from .services.reports import ReportService
 
 class CustomPagination(PageNumberPagination):
     page_size = 2
@@ -39,23 +43,16 @@ class TicketViewSet(ModelViewSet):
 
     # Add filtering, searching, ordering
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'priority']
+    filterset_fields = ['status', 'priority', 'department', 'assigned_to']
     search_fields = ['title', 'ticket_number']
     ordering_fields = ['priority', 'status', 'created_at']
     ordering = ['-created_at']
 
     def get_queryset(self):
         user = self.request.user
-        qs = Ticket.objects.all()
-        if not user.is_admin:
-            qs = qs.filter(
-                Q(assigned_to=user.department) | 
-                Q(department=user.department)
-            )
-
-            print("User:", user, "Department:", user.department)
-            print("Queryset:", qs)
-        return qs
+        if user.is_admin:
+            return Ticket.objects.all()
+        return Ticket.objects.filter(Q(assigned_to=user.department) | Q(department=user.department))
 
     def perform_create(self, serializer):
         serializer.save(
@@ -71,8 +68,11 @@ class TicketViewSet(ModelViewSet):
             'closed': []    # Locked
         }
 
-        instance = self.get_object() # Current ticket in DB
+        instance = self.get_object()
         new_status = self.request.data.get('status')
+
+        if instance.department == self.request.user.department:
+            raise ValidationError("You cannot change a ticket created by your department.")
 
         if new_status and new_status != instance.status:
             if instance.status in ['resolved', 'closed']:
@@ -84,16 +84,48 @@ class TicketViewSet(ModelViewSet):
 
         serializer.save(_current_user=self.request.user)
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
+    @action(detail=True, methods=['get'], url_path='export_detail_pdf')
+    def export_detail_pdf(self, request, pk=None):
+        ticket = self.get_object()
+        return ReportService.generate_single_ticket_pdf(ticket)
 
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+    @action(detail=False, methods=['get'], url_path='export_csv')
+    def export_csv(self, request):
+        queryset = self._get_filtered_report_queryset(request)
+        return ReportService.generate_csv_report(queryset, request.user)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "success": True,
-            "tickets": serializer.data,
-        })
+    @action(detail=False, methods=['get'], url_path='export_pdf')
+    def export_pdf(self, request):
+        queryset = self._get_filtered_report_queryset(request)
+        if request.GET.get('department') == 'all':
+            return ReportService.generate_pdf_report(queryset, request.user, 'all', None, request.GET.get('start'), request.GET.get('end'))
+
+        department_id = request.GET.get('department')
+        department = get_object_or_404(Department, id=department_id)
+        return ReportService.generate_pdf_report(
+            queryset, 
+            request.user,
+            request.GET.get('department', 'all'),
+            department.name if department else None,
+            request.GET.get('start'),
+            request.GET.get('end')
+        )
+
+    def _get_filtered_report_queryset(self, request):
+        """Shared logic to filter tickets for both report types"""
+        user = request.user
+        queryset = self.get_queryset().select_related('department', 'assigned_to')
+        
+        department = request.GET.get('department', 'all')
+        if user.is_admin and department != 'all':
+            queryset = queryset.filter(Q(department_id=department) | Q(assigned_to_id=department))
+
+        start_date = request.GET.get('start')
+        end_date = request.GET.get('end')
+        if start_date and end_date:
+            start = parse_date(start_date)
+            end = parse_date(end_date)
+            if start and end:
+                queryset = queryset.filter(created_at__date__gte=start, created_at__date__lte=end)
+        
+        return queryset

@@ -16,4 +16,6 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='rest_logout'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', get_refresh_view().as_view(), name='token_refresh'),
+
+    path('me/', api.get_user, name='get_user'),
 ]

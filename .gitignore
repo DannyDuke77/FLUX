@@ -3,7 +3,11 @@ venv/
 __pycache__/
 *.pyc
 .env
+.env.*
 db.sqlite3
+staticfiles/
+staticfiles.tar.gz
+static/
 
 # Node / frontend
 node_modules/
@@ -13,3 +17,6 @@ dist/
 # OS / Editor
 .vscode/
 .DS_Store
+
+# Certificates
+certs/

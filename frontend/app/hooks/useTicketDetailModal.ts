@@ -7,6 +7,7 @@ export type TicketType = {
     description: string;
     status: string;
     priority: string;
+    department: string;
     department_name: string;
     assigned_to_dept_name: string;
     assigned_to: string;

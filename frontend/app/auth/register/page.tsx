@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import apiService from "@/app/services/apiService";
 import CustomButton from "@/app/components/ui/CustomButton";
 import { CircleAlert, Eye, EyeOff, User, Mail, Phone, MapPin, Lock, Upload, X, Building } from "lucide-react";
-import { getAuthUser } from "@/app/lib/auth";
+
+const DEBUG = process.env.NODE_ENV !== 'production';
 
 const SignUp = () => {
     const router = useRouter();
@@ -29,7 +30,7 @@ const SignUp = () => {
             const response = await apiService.get('/api/departments/');
             setDepartments(Array.isArray(response) ? response : response.results || []);
         } catch (error) {
-            console.error("Error fetching departments:", error);
+            if (DEBUG) console.error("Error fetching departments:", error);
         }
     }
 
@@ -51,7 +52,7 @@ const SignUp = () => {
             formData.append('department', department);
             formData.append('password1', password1);
             formData.append('password2', password2);
-            console.log("SENDING DATA: ", formData);
+            if (DEBUG) console.log("SENDING DATA: ", formData);
 
             const response = await apiService.post('/api/auth/register/', formData);
 
@@ -81,7 +82,7 @@ const SignUp = () => {
                 setErrors(formattedErrors);
             }
         } catch (error: any) {
-            console.error('Signup error:', error);
+            if (DEBUG) console.error('Signup error:', error);
             setErrors({ 
                 non_field_errors: ['Network error or server unavailable'] 
             });
