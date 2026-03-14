@@ -61,6 +61,8 @@ class Ticket(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
     priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
 
+    image = models.ImageField(upload_to='attachments/tickets', null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -69,6 +71,11 @@ class Ticket(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+    def image_url(self):
+        if not self.image:
+            return None
+        return f'{settings.WEBSITE_URL}{self.image.url}'
         
     def save(self, *args, **kwargs):
         is_new = not Ticket.objects.filter(pk=self.pk).exists() if self.pk else True
@@ -121,6 +128,8 @@ class TicketStatusLog(models.Model):
     new_status = models.CharField(max_length=20)
     changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     changed_at = models.DateTimeField(auto_now_add=True)
+
+    note = models.TextField(null=True, blank=True)
 
     class Meta:
         ordering = ['-changed_at']

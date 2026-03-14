@@ -1,5 +1,6 @@
 'use client';
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import useAddTicketModal from "@/app/hooks/useAddTicketModal";
 import Modal from "./Modal";
@@ -12,7 +13,11 @@ import {
     Layers, 
     Send, 
     AlertTriangle,
-    Clock
+    Clock,
+    X,
+    Upload,
+    NotebookPen,
+    Paperclip
 } from "lucide-react";
 
 const DEBUG = process.env.NODE_ENV !== 'production';
@@ -28,9 +33,26 @@ const AddTicketModal = () => {
     const [description, setDescription] = useState('');
     const [assigned_to, setAssignedTo] = useState('');
     const [priority, setPriority] = useState('');
+    const [image, setImage] = useState<File | null>(null);
+
+    const [preview, setPreview] = useState<string | null>(null);
 
     const router = useRouter();
     const addTicketModal = useAddTicketModal();
+
+    useEffect(() => {
+        if (!image) {
+            setPreview(null);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(image);
+        setPreview(objectUrl);
+
+        return () => {
+            URL.revokeObjectURL(objectUrl);
+        };
+    }, [image]);
 
     const fetchDepartments = async () => {
         try {
@@ -59,6 +81,9 @@ const AddTicketModal = () => {
             formData.append('description', description);
             formData.append('assigned_to', assigned_to);
             formData.append('priority', priority);
+            if (image) {
+                formData.append('image', image);
+            }
 
             const response = await apiService.post('/api/tickets/', formData);
 
@@ -74,6 +99,7 @@ const AddTicketModal = () => {
                     setDescription('');
                     setAssignedTo('');
                     setPriority('');
+                    setImage(null);
                     setSuccess(false);
                 }, 1500);
             } else {
@@ -96,24 +122,11 @@ const AddTicketModal = () => {
                 </div>
             )}
 
-            {/* Error State */}
-            {Object.keys(errors).length > 0 && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 mt-0.5" />
-                    <div className="text-sm">
-                        <p className="font-bold">Please correct the following:</p>
-                        <ul className="list-disc ml-4 mt-1">
-                            {Object.values(errors).flat().map((err, i) => <li key={i}>{err}</li>)}
-                        </ul>
-                    </div>
-                </div>
-            )}
-
             {/* Title Field */}
             <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-300 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-400" />
-                    Ticket Subject
+                    Ticket Subject <span className="text-red-500">*</span>
                 </label>
                 <input 
                     type="text" 
@@ -123,6 +136,7 @@ const AddTicketModal = () => {
                     className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-500"
                     required 
                 />
+                {errors.title && <p className="text-xs text-red-500"><AlertCircle className="w-4 h-4 inline-block mr-1" />{errors.title}</p>}
             </div>
 
             {/* Two Column Row for Dept and Priority */}
@@ -130,7 +144,7 @@ const AddTicketModal = () => {
                 <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-300 flex items-center gap-2">
                         <Layers className="w-4 h-4 text-purple-400" />
-                        Target Department
+                        Target Department <span className="text-red-500">*</span>
                     </label>
                     <select 
                         value={assigned_to} 
@@ -143,12 +157,13 @@ const AddTicketModal = () => {
                             <option key={dept.id} value={dept.id}>{dept.name}</option>
                         ))}
                     </select>
+                    {errors.assigned_to && <p className="text-xs text-red-500"><AlertCircle className="w-4 h-4 inline-block mr-1" />{errors.assigned_to}</p>}
                 </div>
 
                 <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-300 flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                        Priority Level
+                        Priority Level <span className="text-xs text-gray-500">(Default: Medium)</span>
                     </label>
                     <select 
                         value={priority} 
@@ -162,12 +177,16 @@ const AddTicketModal = () => {
                         <option value="high">High</option>
                         <option value="critical">Critical</option>
                     </select>
+                    {errors.priority && <p className="text-xs text-red-500"><AlertCircle className="w-4 h-4 inline-block mr-1" />{errors.priority}</p>}
                 </div>
             </div>
 
             {/* Description Field */}
             <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-300">Detailed Description</label>
+                <label className="text-sm flex items-center gap-2 font-semibold text-gray-300">
+                    <NotebookPen className="w-4 h-4 text-green-400" />
+                    Detailed Description <span className="text-red-500">*</span>
+                </label>
                 <textarea 
                     rows={4}
                     placeholder="Provide all relevant details to help the team resolve this faster..."
@@ -176,6 +195,64 @@ const AddTicketModal = () => {
                     className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none placeholder:text-gray-500"
                     required 
                 />
+                {errors.description && <p className="text-xs text-red-500"><AlertCircle className="w-4 h-4 inline-block mr-1" />{errors.description}</p>}
+            </div>
+
+            <div className="space-y-2">
+                <p className="text-sm flex items-center gap-2 font-semibold text-gray-300">
+                    <Paperclip className="w-4 h-4 text-blue-400" />
+                    Attach a file <span className="text-xs text-gray-500">(Max. 2MB)</span>
+                </p>
+                <label className="block">
+                      <div className="px-6 py-4 bg-gray-800 rounded-2xl border-3 border-dashed border border-gray-700 cursor-pointer transition hover:border-blue-500 focus-within:ring-2 focus-within:ring-black">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                    setImage(e.target.files[0]);
+                                }
+                            }}
+                            className="hidden"
+                        />
+
+                        <div className="flex flex-row items-center justify-center gap-4 text-slate-600">
+                            <div className="p-3 bg-slate-600 rounded-full shadow-sm">
+                                <Upload className="w-6 h-6 text-white" />
+                            </div>
+
+                            <div className="text-center text-white">
+                                <p className="text-base font-medium">
+                                    Click to upload
+                                </p>
+                                <p className="text-sm">
+                                    PNG, JPG or JPEG
+                                </p>
+                            </div>
+                        </div>
+                    </div>  
+                    {errors.image && <p className="text-xs text-red-500 mt-2"><AlertCircle className="w-4 h-4 inline-block mr-1" />{errors.image}</p>}
+
+                    {/* Display uploaded image before submit */}
+                    {preview && (
+                        <div className="w-[400px] h-[400px] relative mt-4 mx-auto">
+                            <Image
+                                fill
+                                src={preview}
+                                alt="Uploaded image"
+                                className="w-full h-full object-cover rounded-xl"
+                            />
+
+                            <button
+                                type="button"
+                                className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-sm cursor-pointer"
+                                onClick={() => setImage(null)}
+                            >
+                                <X className="w-4 h-4 text-gray-600" />
+                            </button>
+                        </div>
+                    )}
+                </label>
             </div>
 
             {/* Action Buttons */}

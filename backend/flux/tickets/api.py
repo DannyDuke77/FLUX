@@ -12,7 +12,7 @@ from django.db.models import Q
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from django.shortcuts import get_object_or_404
 
-from .models import Ticket
+from .models import Ticket, TicketStatusLog
 from accounts.models import Department
 from .serializers import TicketSerializer, DepartmentSerializer
 from .services.reports import ReportService
@@ -64,25 +64,41 @@ class TicketViewSet(ModelViewSet):
         VALID_TRANSITIONS = {
             'open': ['in_progress', 'resolved', 'closed'],
             'in_progress': ['resolved', 'closed'],
-            'resolved': [], # Locked
-            'closed': []    # Locked
+            'resolved': ['in_progress', 'closed'], 
+            'closed': []
         }
 
         instance = self.get_object()
+        old_status = instance.status
         new_status = self.request.data.get('status')
+        resolution_note = self.request.data.get('resolution_note', '').strip()
 
         if instance.department == self.request.user.department:
             raise ValidationError("You cannot change a ticket created by your department.")
 
-        if new_status and new_status != instance.status:
-            if instance.status in ['resolved', 'closed']:
-                raise ValidationError(f"Cannot change status once it is {instance.status}.")
+        if new_status and new_status != old_status:
+            if old_status == 'closed':
+                raise ValidationError("Cannot change status once it is closed.")
 
-            allowed = VALID_TRANSITIONS.get(instance.status, [])
+            allowed = VALID_TRANSITIONS.get(old_status, [])
             if new_status not in allowed:
-                raise ValidationError(f"Invalid transition from {instance.status} to {new_status}.")
+                raise ValidationError(f"Invalid transition from {old_status} to {new_status}.")
 
-        serializer.save(_current_user=self.request.user)
+            if new_status == 'resolved' and not resolution_note:
+                raise ValidationError({"resolution_note": "A resolution note is required to resolve a ticket."})
+
+        updated_instance = serializer.save(_current_user=self.request.user)
+
+        if new_status and new_status != old_status:
+            log_entry = TicketStatusLog.objects.filter(
+                ticket=updated_instance,
+                new_status=new_status
+            ).first()
+            
+            if log_entry:
+                final_note = resolution_note if resolution_note else f"Status changed to {new_status}."
+                log_entry.note = final_note
+                log_entry.save()
 
     @action(detail=True, methods=['get'], url_path='export_detail_pdf')
     def export_detail_pdf(self, request, pk=None):

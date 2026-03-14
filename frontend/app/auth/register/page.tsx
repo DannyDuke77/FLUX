@@ -5,12 +5,18 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import apiService from "@/app/services/apiService";
 import CustomButton from "@/app/components/ui/CustomButton";
-import { CircleAlert, Eye, EyeOff, User, Mail, Phone, MapPin, Lock, Upload, X, Building } from "lucide-react";
+import { UserType } from "@/app/hooks/useReportsModal";
+import Link from "next/link";
+
+import { CircleAlert, Eye, EyeOff, User, Mail, Phone, MapPin, Lock, Upload, X, Building, AlertCircle, ShieldAlert, AlertTriangle, ArrowLeft, Home, Ticket } from "lucide-react";
+import UnauthorizedPage from "@/app/components/ui/UnauthorizedPage";
 
 const DEBUG = process.env.NODE_ENV !== 'production';
 
 const SignUp = () => {
     const router = useRouter();
+
+    const [user, setUser] = useState<UserType | null>();
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -24,6 +30,20 @@ const SignUp = () => {
     const [departments, setDepartments] = useState([]);
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(false);
+
+    const fetchUser = async () => {
+      try {
+          const response = await apiService.get('/api/auth/me/');
+          if (DEBUG) console.log("User fetched:", response);
+          setUser(response);
+      } catch (error) {
+          if (DEBUG) console.error("Error fetching user:", error);
+      }
+    }
+
+    useEffect(() => {
+        fetchUser();
+    }, []);
 
     const fetchDepartments = async () => {
         try {
@@ -86,7 +106,7 @@ const SignUp = () => {
             setErrors({ 
                 non_field_errors: ['Network error or server unavailable'] 
             });
-        } finally {
+        } finally { 
             setLoading(false);
         }
     };
@@ -94,6 +114,12 @@ const SignUp = () => {
     const inputContainerStyle = "relative";
     const inputStyle = "w-full px-10 py-3 bg-gray-900 border-2 border-gray-700 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-gray-800 transition-all duration-300 ease-out hover:border-gray-600 hover:bg-gray-850";
     const iconStyle = "absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-500 peer-focus:text-blue-500 transition-colors duration-300";
+
+    if (!user?.is_admin) {
+    return (
+        <UnauthorizedPage />
+    );
+}
     
     return (
         <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 md:p-6 flex items-center justify-center">

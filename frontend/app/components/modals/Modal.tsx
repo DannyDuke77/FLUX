@@ -24,10 +24,9 @@ const Modal: React.FC<ModalProps> = ({ label, close, content, isOpen }) => {
 
     const handleClose = useCallback(() => {
         setShowModal(false);
-        // Removed window.location.reload() to maintain state
         setTimeout(() => {
             close();
-        }, 300);
+        }, 500);
     }, [close]);
 
     if (!isOpen) return null;
@@ -43,10 +42,10 @@ const Modal: React.FC<ModalProps> = ({ label, close, content, isOpen }) => {
             />
             
             {/* Modal Container */}
-            <div className={`relative w-full max-w-3xl  transition-all duration-300 ease-out ${
+            <div className={`relative w-full max-w-3xl transition-all duration-500 ease-out ${
                 showModal 
                 ? 'opacity-100 scale-100 translate-y-0' 
-                : 'opacity-0 scale-95 translate-y-8'
+                : 'opacity-0 scale-95 translate-y-60'
             }`}>
                 <div className="bg-gray-900 border border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden shadow-black/50">
                     {/* Header */}

@@ -10,8 +10,8 @@ RUN npm install
 COPY . .
 
 # Bake in the production IP
-ENV NEXT_PUBLIC_API_URL=https://tickets.local
-ENV NEXT_PUBLIC_WS_URL=wss://tickets.local/ws
+ENV NEXT_PUBLIC_API_URL=https://tickets.internal
+ENV NEXT_PUBLIC_WS_URL=wss://tickets.internal/ws
 ENV NODE_ENV=production
 
 # Next.js will now find the 'app' directory correctly

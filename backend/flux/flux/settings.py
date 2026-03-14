@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ") + ["tickets.local"]
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ") + ["tickets.internal"]
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -71,7 +71,7 @@ def get_list(env_var):
     return [item.strip() for item in value.split(",") if item.strip()]
 
 CORS_ALLOWED_ORIGINS = get_list("CORS_ALLOWED_ORIGINS")
-CSRF_TRUSTED_ORIGINS = get_list("CSRF_TRUSTED_ORIGINS") + ["https://tickets.local"]
+CSRF_TRUSTED_ORIGINS = get_list("CSRF_TRUSTED_ORIGINS") + ["https://tickets.internal"]
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 
@@ -229,6 +229,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'frontend_static'),
+]
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'

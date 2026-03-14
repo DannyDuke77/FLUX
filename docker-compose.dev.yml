@@ -24,6 +24,7 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend/flux:/usr/src/flux
+      - ./frontend/public:/usr/src/flux/frontend_static:ro
     ports:
       - "8000:8000"
     env_file:

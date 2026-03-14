@@ -17,4 +17,4 @@ const AddTicketButton = () => {
     )
 }
 
-export default AddTicketButton
+export default AddTicketButton;

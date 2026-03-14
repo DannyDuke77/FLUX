@@ -124,26 +124,28 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ appUser }) => {
         }`}
       >
         {/* Sidebar Header with Close Button on Mobile */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-700/50 h-20">
+        <div className="flex items-center justify-between px-6 py-5 mt-4 h-20">
           {/* Logo Section - Hidden on collapsed medium screens */}
           <div 
             onClick={() => window.location.href = "/"}
-            className={`flex items-center gap-3 transition-all duration-300 cursor-pointer ${
+            className={`flex items-center gap-3 transition-all duration-300 cursor-pointer${
               isOpen || isSmallScreen ? "w-auto" : "hidden w-0"
             }`}
           >
             
-            <div className="min-w-0 space-y-1">
-              <div className="items-center space-x-1 text-2xl md:text-4xl font-black tracking-tighter">
-                <span className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]">F</span>
-                <span className="text-cyan-400 text-sm md:text-xl drop-shadow-[0_0_6px_rgba(34,211,238,0.8)]">.</span>
-                <span className="text-white/90 drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">L</span>
-                <span className="text-cyan-400 text-sm md:text-xl drop-shadow-[0_0_6px_rgba(34,211,238,0.8)]">.</span>
-                <span className="text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">U</span>
-                <span className="text-cyan-400 text-sm md:text-xl drop-shadow-[0_0_6px_rgba(34,211,238,0.8)]">.</span>
-                <span className="text-white/70 drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">X</span>
+            <div className={`space-y-1 mt-8 ${isOpen || isSmallScreen ? "w-[200px]" : "hidden w-0"}`}>
+              <div className="">
+                <Image
+                  src="/blooming-logo.png"
+                  alt="Blooming Suites Logo"
+                  width={100}
+                  height={50}
+                  priority
+                  sizes="100vw"
+                  className="w-full px-2 bg-white rounded-lg"
+                />
               </div>
-              <p className="text-xs text-gray-400 truncate">Ticketing System</p>
+              <p className="font-semibold text-center text-gray-400">Ticketing System</p>
             </div>
           </div>
           
@@ -160,19 +162,35 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ appUser }) => {
           
           {/* Collapse/Expand Button for Desktop */}
           {!isSmallScreen && (
-            <button 
-              onClick={toggleSidebar}
-              className={`p-2 text-gray-400 z-10 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-300
-                ${isOpen ? "" : ""}`}
-              aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
-            >
-              {isOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-            </button>
+            <>
+              <button 
+                onClick={toggleSidebar}
+                className={`p-2 text-gray-400 z-10 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-300
+                  ${isOpen ? "" : ""}`}
+                aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                {isOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+              </button>
+          </>
           )}
         </div>
 
+        <div className={`${isOpen || isSmallScreen ? "hidden w-0" : "w-auto"}`}>
+          <div className="">
+            <Image
+              src="/superior-logo-v2.png"
+              alt="Superior Hotels Kenya Logo"
+              width={100}
+              height={50}
+              sizes="100vw"
+              className="scale-100"
+            />
+          </div>
+        </div>
+
+
         {/* Navigation */}
-        <div className="px-4 py-6 h-[calc(100vh-180px)] overflow-y-auto">
+        <div className="px-4 py-6 h-[calc(100vh-180px)] overflow-y-auto mt-4">
           {/* Section Title - Hidden on collapsed medium screens */}
           <h2 className={`text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3 transition-opacity duration-300 ${
             isOpen || isSmallScreen ? "opacity-100" : "opacity-0"
@@ -230,12 +248,15 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ appUser }) => {
                 </Link>
               );
             })}
-            <ReportsButton user={appUser} />
+            <ReportsButton 
+              user={appUser} 
+              className={`${isOpen || isSmallScreen ? "" : "-ml-3"}`}
+            />
           </nav>
         </div>
 
         {/* Footer - User & Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700/50 bg-gray-800/95 backdrop-blur-sm">
+        <div className={`absolute left-0 right-0 p-4 border-t border-gray-700/50 bg-gray-800/95 backdrop-blur-sm ${isSmallScreen ? "bottom-24" : "bottom-0"}`}>
           {/* User Info - shown on open sidebar or small screen */}
           {(isOpen || isSmallScreen) && (
             <div className="mb-4 px-3">

@@ -29,6 +29,8 @@ import { TicketType } from "../hooks/useTicketDetailModal";
 import { useTicketSocket } from "../hooks/useTicketSocket";
 import ReportsButton from "../components/navigation/ReportsButton";
 import { UserType } from "../hooks/useReportsModal";
+import useResolutionModal from "../hooks/useResolutionModal";
+import ResolutionModal from "../components/modals/ResolutionModal";
 
 const DEBUG = process.env.NODE_ENV !== 'production';
 
@@ -110,7 +112,7 @@ const StatusBadge = ({ status, ticketId, onStatusChange }: { status: string; tic
             <select
                 value={status}
                 onChange={(e) => onStatusChange(ticketId, e.target.value)}
-                disabled={['resolved', 'closed'].includes(status)}
+                disabled={['closed'].includes(status)}
                 className={`hidden sm:block px-3 py-1.5 rounded-lg text-xs font-medium border bg-gray-900 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all cursor-pointer hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed ${
                     status === 'open' ? 'border-emerald-500/30 text-emerald-300' :
                     status === 'in_progress' ? 'border-blue-500/30 text-blue-300' :
@@ -149,6 +151,8 @@ const TicketsPage = () => {
   }, [])
 
   const [user, setUser] = useState<UserType | null>();
+
+  const resolutionModal = useResolutionModal();
 
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [departments, setDepartments] = useState([]);
@@ -208,19 +212,25 @@ const TicketsPage = () => {
       page_size: pageSize.toString(),
     };
 
-    // Handle department filter logic
-    if (filters.department === "my_department") {
-      queryParams.department = user?.department_id.toString() || ""; // tickets created by user's dept
-      delete queryParams.assigned_to; // make sure assigned_to doesn't override
-    } else if (filters.department) {
-      queryParams.department = filters.department; // tickets created by selected dept
+    if (user?.is_admin && filters.department === "all") {
+      delete queryParams.department;
       delete queryParams.assigned_to;
-    } else {
-      queryParams.assigned_to = user?.department_id.toString() || ""; // default: tickets assigned to user's dept
+    }
+
+    else if (filters.department === "my_department" || (filters.department && filters.department !== "all")) {
+      const deptId = filters.department === "my_department" 
+        ? user?.department_id.toString() 
+        : filters.department;
+      
+      queryParams.department = deptId || "";
+      delete queryParams.assigned_to;
+    } 
+    else {
+      queryParams.assigned_to = user?.department_id.toString() || "";
       delete queryParams.department;
     }
 
-    // Only admins can filter by assigned_to
+    // Only admins can filter by specific assigned_to user/dept if provided
     if (user?.is_admin && filters.assigned_to) {
       queryParams.assigned_to = filters.assigned_to;
     }
@@ -230,8 +240,6 @@ const TicketsPage = () => {
     if (response.success) {
       setTickets(response.results);
       setTotalCount(response.count);
-    } else {
-      if (DEBUG) console.error("Failed to fetch tickets:", response.error);
     }
   } catch (error) {
     if (DEBUG) console.error("Failed to fetch tickets:", error);
@@ -257,21 +265,16 @@ const TicketsPage = () => {
   }, [fetchTickets]);
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
+    if (['resolved', 'closed'].includes(newStatus)) {
+        resolutionModal.open(ticketId, newStatus);
+        return;
+    }
+
     try {
-      const response = await apiService.patch(`/api/tickets/${ticketId}/`, {
-        status: newStatus
-      });
-      
-      if (response.id) {
+        await apiService.patch(`/api/tickets/${ticketId}/`, { status: newStatus });
         fetchTickets();
-      } else {
-        setErrorMessage(response);
-        fetchTickets();
-      }
     } catch (error: any) {
-        const message = error.response?.data?.[0] || "Update failed";
-        setErrorMessage(error.response?.data?.detail || "Status cannot be moved backwards");
-        alert(`Action Denied: ${message}`);
+        alert(error.response?.data?.detail || "Update failed");
         fetchTickets();
     }
   };
@@ -335,7 +338,7 @@ const TicketsPage = () => {
       <div className="mt-3 pt-3 border-t border-gray-700/50 sm:hidden">
         <select
           value={ticket.status}
-          disabled={['resolved', 'closed'].includes(ticket.status)}
+          disabled={['closed'].includes(ticket.status)}
           onChange={(e) => onStatusChange(ticket.id, e.target.value)}
           className={`w-full px-3 py-2 rounded-lg text-xs font-medium border bg-gray-900 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all ${
             ticket.status === 'open' ? 'border-emerald-500/30 text-emerald-300' :
@@ -458,7 +461,8 @@ const TicketsPage = () => {
                 onChange={(e) => setFilters({ ...filters, department: e.target.value })}
               >
                 <option value="">Assigned to my department</option>
-                <option value={user?.department_id}>My Department</option>
+                {user?.is_admin && <option value="all">All Departments</option>}
+                <option value="my_department">My Created Tickets</option>
                 {departments.map((department: any) => (
                   <option key={department.id} value={department.id}>
                     {department.name}
@@ -728,6 +732,8 @@ const TicketsPage = () => {
           </div>
         )}
       </div>
+
+      <ResolutionModal onRefresh={fetchTickets} />
     </div>
   );
 };

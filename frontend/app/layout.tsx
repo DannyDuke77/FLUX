@@ -5,6 +5,7 @@ import Navbar from "./components/navbar/Navbar";
 import AddTicketModal from "./components/modals/AddTicketModal";
 import DetailModal from "./components/modals/DetailModal";
 import ReportsModal from "./components/modals/ReportsModal";
+import ResolutionModal from "./components/modals/ResolutionModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,8 +49,7 @@ export default function RootLayout({
 
             <AddTicketModal />
             <DetailModal />
-            <ReportsModal />
-            
+            <ReportsModal />            
           </main>
         </div>
       </body>

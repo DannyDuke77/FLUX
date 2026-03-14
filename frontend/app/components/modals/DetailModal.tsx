@@ -1,7 +1,8 @@
 'use client';
 
+import Image from "next/image";
 import Modal from "./Modal";
-import { Clock, User, Building2, AlertCircle, FileText, MoveRight, Info, History, Hash, Calendar, ChevronRight } from "lucide-react";
+import { Clock, User, Building2, AlertCircle, FileText, MoveRight, Info, History, Hash, Calendar, ChevronRight, Paperclip, File, Download } from "lucide-react";
 import useTicketDetailModal from "@/app/hooks/useTicketDetailModal";
 import { useState } from "react";
 import apiService from "@/app/services/apiService";
@@ -39,7 +40,7 @@ export const formatDateTime = (dateInput: string | Date | null | undefined): str
     }).format(date);
 };
 
-// Mobile-friendly card for activity logs
+// Mobile card for activity logs
 const MobileActivityCard = ({ log }: { log: any }) => (
     <div className="sm:hidden bg-gray-800/30 border border-gray-700/50 rounded-xl p-4 mb-3">
         <div className="flex items-center justify-between mb-3">
@@ -56,25 +57,33 @@ const MobileActivityCard = ({ log }: { log: any }) => (
             </span>
         </div>
         
-        <div className="flex items-center justify-between">
-            <div className="flex-1">
-                <Badge variant={log.old_status}>
-                    {log.old_status.toUpperCase()}
-                </Badge>
+        <div className="space-y-2">
+            <div className="flex items-center">
+                <div className="flex-1">
+                    <Badge variant={log.old_status}>
+                        {log.old_status.toUpperCase()}
+                    </Badge>
+                </div>
+                <ChevronRight size={16} className="text-gray-600 mx-2" />
+                <div className="flex-1 text-right">
+                    <Badge variant={log.new_status}>
+                        {log.new_status.toUpperCase()}
+                    </Badge>
+                </div>
             </div>
-            <ChevronRight size={16} className="text-gray-600 mx-2" />
-            <div className="flex-1 text-right">
-                <Badge variant={log.new_status}>
-                    {log.new_status.toUpperCase()}
-                </Badge>
-            </div>
+
+            {log.note && (
+                <p className="text-xs text-gray-500">
+                    <span className="font-semibold">Note: </span><span className="">{log.note}</span>
+                </p>
+            )}
         </div>
     </div>
 );
 
 const DetailModal = () => {
     const { ticket, isOpen, close } = useTicketDetailModal();
-    const [currentTab, setCurrentTab] = useState<'details' | 'logs'>('details');
+    const [currentTab, setCurrentTab] = useState<'details' | 'logs' | 'attachment'>('details');
 
     const downloadTicketDetailPDF = async (ticketId: string, ticketNumber: string) => {
         try {
@@ -93,7 +102,7 @@ const DetailModal = () => {
         }
     }
 
-    const TabButton = ({ id, label, icon: Icon, count }: { id: 'details' | 'logs', label: string, icon: any, count?: number }) => (
+    const TabButton = ({ id, label, icon: Icon, count }: { id: 'details' | 'attachment' | 'logs', label: string, icon: any, count?: number }) => (
         <button
             onClick={() => setCurrentTab(id)}
             className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-all relative group flex-1 sm:flex-none justify-center ${
@@ -111,6 +120,15 @@ const DetailModal = () => {
                     : "bg-gray-800 text-gray-400"
                 }`}>
                     {count}
+                </span>
+            )}
+            {id === 'attachment' && ticket?.image && (
+                <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                    currentTab === id 
+                    ? "bg-blue-500/20 text-blue-300" 
+                    : "bg-gray-800 text-gray-400"
+                }`}>
+                    <span className="text-xs">1</span>
                 </span>
             )}
         </button>        
@@ -159,6 +177,7 @@ const DetailModal = () => {
             <div className="flex border-b border-gray-800/60 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scrollbar-hide">
                 <div className="flex min-w-full sm:min-w-0">
                     <TabButton id="details" label="Details" icon={Info} />
+                    <TabButton id="attachment" label="Attachments" icon={Paperclip} />
                     <TabButton id="logs" label="Activity" icon={History} count={logCount} />
                 </div>
             </div>
@@ -240,6 +259,37 @@ const DetailModal = () => {
                         </div>
                     </div>
                 </div>
+            ) : currentTab === 'attachment' ? (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 text-white">
+                    {ticket?.image ? (
+                        <div className="relative">
+                        <Image
+                            src={ticket?.image}
+                            alt={ticket?.title}
+                            width={600}
+                            height={600}
+                            className="w-full h-auto rounded-xl border border-gray-700/50"
+                            unoptimized
+                        />
+
+                        {/* Download Icon */}
+                        <a
+                            href={ticket?.image}
+                            download
+                            className="absolute top-3 right-3 p-2 rounded-lg bg-black/60 hover:bg-black/80 transition"
+                        >
+                            <Download className="w-5 h-5 text-white" />
+                        </a>
+                        </div>
+                    ) : (
+                        <div className="py-12 sm:py-16 text-center bg-gray-800/20 rounded-xl border border-gray-700/50 border-dashed">
+                        <File className="w-8 h-8 sm:w-12 sm:h-12 text-gray-700 mx-auto mb-3 sm:mb-4" />
+                        <p className="text-sm sm:text-base font-medium text-gray-400">
+                            No attachment found
+                        </p>
+                        </div>
+                    )}
+                    </div>
             ) : (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {/* Logs Header - Mobile Optimized */}
@@ -271,6 +321,7 @@ const DetailModal = () => {
                                             <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status Change</th>
                                             <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Changed By</th>
                                             <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Date & Time</th>
+                                            <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Note</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-700/50">
@@ -295,6 +346,9 @@ const DetailModal = () => {
                                                 </td>
                                                 <td className="px-5 py-4 text-sm text-gray-400 font-mono">
                                                     {formatDateTime(log.changed_at)}
+                                                </td>
+                                                <td className="px-5 py-4 text-sm text-gray-400">
+                                                    {log.note}
                                                 </td>
                                             </tr>
                                         ))}

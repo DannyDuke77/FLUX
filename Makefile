@@ -1,8 +1,12 @@
-.PHONY: dev prod down superuser
+.PHONY: dev prod down devup superuser
 
 # Start dev environment
 dev:
 	docker compose --env-file .env.dev -f docker-compose.dev.yml up --build -d
+
+# Start dev environment in detached mode
+devup:
+	docker compose --env-file .env.dev -f docker-compose.dev.yml up -d
 
 # Start prod environment
 prod:

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const protectedRoutes = ['/tickets'];
+const protectedRoutes = ['/tickets', 'auth/register'];
 const authRoutes = ['/auth/login']; 
 
 // The export MUST be named "proxy" for this file convention

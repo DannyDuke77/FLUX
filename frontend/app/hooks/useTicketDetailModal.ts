@@ -7,6 +7,7 @@ export type TicketType = {
     description: string;
     status: string;
     priority: string;
+    image: string;
     department: string;
     department_name: string;
     assigned_to_dept_name: string;
@@ -20,6 +21,7 @@ export type TicketType = {
         new_status: string;
         changed_by_name: string;
         changed_at: string;
+        note: string;
     }[];
 };
 
