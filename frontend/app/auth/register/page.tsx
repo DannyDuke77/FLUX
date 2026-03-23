@@ -310,7 +310,6 @@ const SignUp = () => {
                             </div>
                         </div>
                     )}
-
                     {/* Submit Button */}
                     <div className="pt-1">
                         <CustomButton 

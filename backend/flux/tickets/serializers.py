@@ -63,6 +63,20 @@ class TicketSerializer(serializers.ModelSerializer):
             'status_logs',
         ]
 
+    def validate(self, attrs):
+        request = self.context.get('request')
+        user_company = getattr(request.user, 'company', None)
+
+        department = attrs.get('department') or getattr(request.user, 'department', None)
+        if department and department.company != user_company:
+            raise serializers.ValidationError("The department must belong to your company.")
+
+        assigned_to = attrs.get('assigned_to')
+        if assigned_to and assigned_to.company != user_company:
+            raise serializers.ValidationError("You cannot assign tickets to a department outside your company.")
+
+        return attrs
+
     def validate_image(self, value):
         if not value:
             return value

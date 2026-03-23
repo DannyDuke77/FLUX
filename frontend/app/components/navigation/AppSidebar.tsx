@@ -6,16 +6,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "../LogoutButton";
 import { 
-  LayoutDashboard, 
-  Building, 
-  Users, 
   Ticket, 
-  Settings, 
   ChevronLeft, 
   ChevronRight,
   Menu,
   X,
-  Home,
   User
 } from "lucide-react"
 import ReportsButton from "./ReportsButton";

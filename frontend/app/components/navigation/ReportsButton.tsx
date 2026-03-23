@@ -2,7 +2,7 @@
 
 import useReportsModal from "@/app/hooks/useReportsModal";
 import { UserType } from "@/app/hooks/useReportsModal";
-import { Home, Download } from "lucide-react";
+import { Download } from "lucide-react";
 
 
 interface ReportsButtonProps {
@@ -26,4 +26,4 @@ const ReportsButton: React.FC<ReportsButtonProps> = ({ user, className }) => {
     )
 }
 
-export default ReportsButton
+export default ReportsButton;

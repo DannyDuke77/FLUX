@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, UserManager, PermissionsMixin
 
 from .validators import normalize_kenyan_phone
+from companies.models import BaseCompanyModel
 
 # Create your models here.
 class CustomUserManager(UserManager):
@@ -34,17 +35,18 @@ class CustomUserManager(UserManager):
 
         return self._create_user(name, email, password, **extra_fields)
     
-class Department(models.Model):
+class Department(BaseCompanyModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
     
-class User(AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser, PermissionsMixin, BaseCompanyModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=150, unique=True)
-    email = models.EmailField(unique=True)
+    name = models.CharField(max_length=150)
+    
+    email = models.EmailField()
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     department = models.ForeignKey(Department, on_delete=models.PROTECT, null=True)
 
@@ -66,6 +68,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
     
     def clean(self):
         super().clean()

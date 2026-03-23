@@ -8,6 +8,7 @@ from channels.layers import get_channel_layer
 
 from accounts.models import Department
 import random
+from companies.models import BaseCompanyModel
 
 
 def generate_ticket_number():
@@ -17,7 +18,7 @@ def generate_ticket_number():
     return f"{date_str}-{rand}"
 
 
-class Ticket(models.Model):
+class Ticket(BaseCompanyModel):
 
     class Status(models.TextChoices):
         OPEN = 'open', 'Open'
@@ -33,7 +34,7 @@ class Ticket(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    ticket_number = models.CharField(max_length=20, unique=True, editable=False)
+    ticket_number = models.CharField(max_length=20, editable=False)
     title = models.CharField(max_length=255)
     description = models.TextField()
 
@@ -95,6 +96,9 @@ class Ticket(models.Model):
                 pass
 
         if is_new:
+            if self.created_by:
+                self.company = self.created_by.company
+            
             if self.created_by and not hasattr(self, 'department'):
                 self.department = self.created_by.department
                 
@@ -121,7 +125,7 @@ class Ticket(models.Model):
         except Exception as e:
             print(f"WS Error: {e}")
 
-class TicketStatusLog(models.Model):
+class TicketStatusLog(BaseCompanyModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='status_logs')
     old_status = models.CharField(max_length=20)

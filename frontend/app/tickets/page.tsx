@@ -27,7 +27,6 @@ import AddTicketButton from "../components/navigation/AddTicketButton";
 import ViewTicketButton from "../components/navigation/ViewTicketButton";
 import { TicketType } from "../hooks/useTicketDetailModal";
 import { useTicketSocket } from "../hooks/useTicketSocket";
-import ReportsButton from "../components/navigation/ReportsButton";
 import { UserType } from "../hooks/useReportsModal";
 import useResolutionModal from "../hooks/useResolutionModal";
 import ResolutionModal from "../components/modals/ResolutionModal";
@@ -199,54 +198,56 @@ const TicketsPage = () => {
   }, []);
 
   const fetchTickets = useCallback(async () => {
-  setLoading(true);
+    setLoading(true);
 
 
-  try {
-    const queryParams: Record<string, string> = {
-      search,
-      status: filters.status,
-      priority: filters.priority,
-      ordering: filters.ordering,
-      page: currentPage.toString(),
-      page_size: pageSize.toString(),
-    };
+    try {
+      const queryParams: Record<string, string> = {
+        search,
+        status: filters.status,
+        priority: filters.priority,
+        ordering: filters.ordering,
+        page: currentPage.toString(),
+        page_size: pageSize.toString(),
+      };
 
-    if (user?.is_admin && filters.department === "all") {
-      delete queryParams.department;
-      delete queryParams.assigned_to;
+      if (user?.is_admin && filters.department === "all") {
+        delete queryParams.department;
+        delete queryParams.assigned_to;
+      }
+
+      else if (filters.department === "my_department" || (filters.department && filters.department !== "all")) {
+        const deptId = filters.department === "my_department" 
+          ? user?.department_id.toString() 
+          : filters.department;
+        
+        queryParams.department = deptId || "";
+        delete queryParams.assigned_to;
+      } 
+      else {
+        queryParams.assigned_to = user?.department_id.toString() || "";
+        delete queryParams.department;
+      }
+
+      // Only admins can filter by specific assigned_to user/dept if provided
+      if (user?.is_admin && filters.assigned_to) {
+        queryParams.assigned_to = filters.assigned_to;
+      }
+
+      const response = await apiService.get(`/api/tickets/?${new URLSearchParams(queryParams).toString()}`);
+
+      if (response.success) {
+        setTickets(response.results);
+        setTotalCount(response.count);
+      } else {
+        setErrorMessage(response.error);
+      }
+    } catch (error) {
+      if (DEBUG) console.error("Failed to fetch tickets:", error);
+    } finally {
+      setLoading(false);
     }
-
-    else if (filters.department === "my_department" || (filters.department && filters.department !== "all")) {
-      const deptId = filters.department === "my_department" 
-        ? user?.department_id.toString() 
-        : filters.department;
-      
-      queryParams.department = deptId || "";
-      delete queryParams.assigned_to;
-    } 
-    else {
-      queryParams.assigned_to = user?.department_id.toString() || "";
-      delete queryParams.department;
-    }
-
-    // Only admins can filter by specific assigned_to user/dept if provided
-    if (user?.is_admin && filters.assigned_to) {
-      queryParams.assigned_to = filters.assigned_to;
-    }
-
-    const response = await apiService.get(`/api/tickets/?${new URLSearchParams(queryParams).toString()}`);
-
-    if (response.success) {
-      setTickets(response.results);
-      setTotalCount(response.count);
-    }
-  } catch (error) {
-    if (DEBUG) console.error("Failed to fetch tickets:", error);
-  } finally {
-    setLoading(false);
-  }
-}, [search, filters, currentPage, user]);
+  }, [search, filters, currentPage, user]);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -265,7 +266,7 @@ const TicketsPage = () => {
   }, [fetchTickets]);
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
-    if (['resolved', 'closed'].includes(newStatus)) {
+    if (['open', 'resolved', 'closed'].includes(newStatus)) {
         resolutionModal.open(ticketId, newStatus);
         return;
     }

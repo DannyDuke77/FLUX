@@ -13,7 +13,7 @@ const ResolutionModal = ({ onRefresh }: { onRefresh: () => void }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Logic: Note is required ONLY if status is 'resolved'
-    const isNoteRequired = modal.newStatus === 'resolved';
+    const isNoteRequired = modal.newStatus === 'resolved' || modal.newStatus === 'open';;
     const isButtonDisabled = isNoteRequired ? !note.trim() : false;
 
     const handleSubmit = async () => {
@@ -42,9 +42,11 @@ const ResolutionModal = ({ onRefresh }: { onRefresh: () => void }) => {
                     <AlertCircle className={`w-4 h-4 ${isNoteRequired ? 'text-amber-400' : 'text-blue-400'}`} />
                 </div>
                 <p className="text-sm leading-relaxed text-gray-300">
-                    {isNoteRequired 
-                        ? "This ticket requires a resolution note. Please document the steps taken to fix the issue for the audit trail." 
-                        : "You are closing this ticket. You can provide an optional reason for closure or leave it blank to use the default system note."}
+                    {modal.newStatus === 'open' 
+                        ? "Please provide a reason for re-opening this ticket. Explain what remains unresolved." 
+                        : isNoteRequired 
+                            ? "This ticket requires a resolution note. Please document the steps taken to fix the issue." 
+                            : "You are closing this ticket. You may optionally provide a note with technical details or leave it blank."}
                 </p>
             </div>
 
@@ -53,7 +55,7 @@ const ResolutionModal = ({ onRefresh }: { onRefresh: () => void }) => {
                 <textarea
                     autoFocus
                     className="w-full min-h-[160px] bg-gray-950/50 border border-gray-700/50 rounded-2xl p-4 text-sm text-white placeholder:text-gray-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 outline-none transition-all resize-none custom-scrollbar"
-                    placeholder={isNoteRequired ? "Technical details of the fix (Required)..." : "Reason for closure (Optional)..."}
+                    placeholder={modal.newStatus === 'open' ? "Reason for re-opening (Required)..." : "Technical details..."}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                 />

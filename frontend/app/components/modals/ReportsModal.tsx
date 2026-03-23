@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import useReportsModal from "@/app/hooks/useReportsModal";
 import Modal from "./Modal";
 import apiService from "@/app/services/apiService";
-import { ChevronDown, Calendar, FileText } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const DEBUG = process.env.NODE_ENV !== 'production';
 

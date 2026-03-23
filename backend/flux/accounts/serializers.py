@@ -4,33 +4,46 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from PIL import Image
 from rest_framework.exceptions import AuthenticationFailed
 from allauth.account.adapter import get_adapter
+from allauth.account.models import EmailAddress, EmailConfirmation
 
 from .models import User
 from .validators import normalize_kenyan_phone
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-
-        # Add custom claims
         token['name'] = user.name
         token['email'] = user.email
         token['is_admin'] = user.is_admin
         token['department'] = user.department.name
         token['department_id'] = str(user.department.id)
         token["sub"] = str(user.id)
-
         return token
     
     def validate(self, attrs):
         try:
-            return super().validate(attrs)
+            data = super().validate(attrs)
         except AuthenticationFailed:
+            raise AuthenticationFailed("Invalid credentials, please try again.")
+
+        email_obj = EmailAddress.objects.filter(
+            user=self.user, 
+            email=self.user.email
+        ).first()
+
+        if not email_obj or not email_obj.verified:
+            if email_obj:
+                pass
+                # email_obj.send_confirmation(self.context['request'])
+            
             raise AuthenticationFailed(
-                "Invalid credentials, please try again."
+                "Your email is not verified. ****** A new link has been sent to your inbox."
             )
 
+        return data
+    
 class CustomRegisterSerializer(RegisterSerializer):
     username = None
 

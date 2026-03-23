@@ -63,7 +63,17 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
-    )
+    ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '5/minute',
+        'register': '5/minute',
+        'anon': '10/minute',
+        'user': '1000/day',
+    }
 }
 
 def get_list(env_var):
@@ -110,6 +120,21 @@ CHANNEL_LAYERS = {
         },
     },
 }
+LOGIN_REDIRECT_URL = '/tickets/'
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/api/auth/login/'
+
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True  # User confirms just by clicking the link
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = f"FLUX <{EMAIL_HOST_USER}>"
 
 # Application definition
 
@@ -140,6 +165,7 @@ INSTALLED_APPS = [
 
     'accounts',
     'tickets',
+    'companies',
 ]
 
 MIDDLEWARE = [

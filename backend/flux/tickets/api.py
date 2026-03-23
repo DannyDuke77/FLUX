@@ -16,6 +16,7 @@ from .models import Ticket, TicketStatusLog
 from accounts.models import Department
 from .serializers import TicketSerializer, DepartmentSerializer
 from .services.reports import ReportService
+from accounts.permissions import IsAdminUserCustom, IsEmailVerified
 
 class CustomPagination(PageNumberPagination):
     page_size = 2
@@ -34,10 +35,10 @@ class CustomPagination(PageNumberPagination):
 class DepartmentViewSet(ReadOnlyModelViewSet):
     queryset = Department.objects.all().order_by('name')
     serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEmailVerified]
 
 class TicketViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEmailVerified]
     serializer_class = TicketSerializer
     pagination_class = CustomPagination
 
@@ -51,52 +52,57 @@ class TicketViewSet(ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_admin:
-            return Ticket.objects.all()
-        return Ticket.objects.filter(Q(assigned_to=user.department) | Q(department=user.department))
+            return Ticket.objects.all().filter(company=user.company)
+        return Ticket.objects.filter(Q(company=user.company) | Q(assigned_to=user.department) | Q(department=user.department))
 
     def perform_create(self, serializer):
         serializer.save(
             created_by=self.request.user,
-            department=self.request.user.department
+            department=self.request.user.department,
+            company=self.request.user.company
         )
 
     def perform_update(self, serializer):
         VALID_TRANSITIONS = {
             'open': ['in_progress', 'resolved', 'closed'],
             'in_progress': ['resolved', 'closed'],
-            'resolved': ['in_progress', 'closed'], 
+            'resolved': ['open', 'closed'], 
             'closed': []
         }
 
         instance = self.get_object()
         old_status = instance.status
         new_status = self.request.data.get('status')
-        resolution_note = self.request.data.get('resolution_note', '').strip()
+        note = self.request.data.get('resolution_note', '').strip()
 
         if instance.department == self.request.user.department:
-            raise ValidationError("You cannot change a ticket created by your department.")
+            raise ValidationError({"error": "You cannot change a ticket created by your department."})
 
         if new_status and new_status != old_status:
             if old_status == 'closed':
-                raise ValidationError("Cannot change status once it is closed.")
+                raise ValidationError({"error": "Cannot change status once it is closed."})
 
             allowed = VALID_TRANSITIONS.get(old_status, [])
             if new_status not in allowed:
-                raise ValidationError(f"Invalid transition from {old_status} to {new_status}.")
+                raise ValidationError({"error": f"Invalid transition from {old_status} to {new_status}."})
 
-            if new_status == 'resolved' and not resolution_note:
+            if new_status == 'resolved' and not note:
                 raise ValidationError({"resolution_note": "A resolution note is required to resolve a ticket."})
+            
+            if old_status == 'resolved' and new_status == 'open' and not note:
+                raise ValidationError({"resolution_note": "A reason is required to re-open a resolved ticket."})
 
         updated_instance = serializer.save(_current_user=self.request.user)
 
         if new_status and new_status != old_status:
             log_entry = TicketStatusLog.objects.filter(
                 ticket=updated_instance,
-                new_status=new_status
+                new_status=new_status,
+                company=self.request.user.company
             ).first()
             
             if log_entry:
-                final_note = resolution_note if resolution_note else f"Status changed to {new_status}."
+                final_note = note if note else f"Status changed to {new_status}."
                 log_entry.note = final_note
                 log_entry.save()
 

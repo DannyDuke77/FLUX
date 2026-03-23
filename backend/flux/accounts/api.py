@@ -5,15 +5,16 @@ from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.response import Response
 
 from .serializers import UserDetailSerializer
+from .permissions import IsAdminUserCustom, IsEmailVerified
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsEmailVerified])
 def create_object(request):
     return Response({"detail": "object created"})
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsEmailVerified])
 def get_user(request):
     serializer = UserDetailSerializer(request.user)
     return JsonResponse(serializer.data)

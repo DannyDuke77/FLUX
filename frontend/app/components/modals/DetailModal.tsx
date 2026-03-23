@@ -6,6 +6,7 @@ import { Clock, User, Building2, AlertCircle, FileText, MoveRight, Info, History
 import useTicketDetailModal from "@/app/hooks/useTicketDetailModal";
 import { useState } from "react";
 import apiService from "@/app/services/apiService";
+import ViewTicketNoteButton from "../navigation/ViewTicketNoteButton";
 
 const Badge = ({ children, variant }: { children: React.ReactNode, variant: string }) => {
     const variants: Record<string, string> = {
@@ -321,7 +322,7 @@ const DetailModal = () => {
                                             <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status Change</th>
                                             <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Changed By</th>
                                             <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Date & Time</th>
-                                            <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Note</th>
+                                            <th className="px-5 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Notes</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-700/50">
@@ -348,7 +349,16 @@ const DetailModal = () => {
                                                     {formatDateTime(log.changed_at)}
                                                 </td>
                                                 <td className="px-5 py-4 text-sm text-gray-400">
-                                                    {log.note}
+                                                    {log.note ? (
+                                                        <div className="space-y-1">
+                                                            <p className="line-clamp-2">{log.note}</p>
+                                                            <ViewTicketNoteButton log={log} />
+                                                        </div>
+                                                        
+                                                        
+                                                    ) : (
+                                                        <span className="text-gray-500 italic">No notes</span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

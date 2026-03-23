@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
   reactCompiler: false,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
 
   images: {
     remotePatterns: [
