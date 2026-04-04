@@ -14,12 +14,12 @@ from django.shortcuts import get_object_or_404
 
 from .models import Ticket, TicketStatusLog
 from accounts.models import Department
-from .serializers import TicketSerializer, DepartmentSerializer
+from .serializers import TicketSerializer
 from .services.reports import ReportService
 from accounts.permissions import IsAdminUserCustom, IsEmailVerified
 
 class CustomPagination(PageNumberPagination):
-    page_size = 2
+    page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
 
@@ -31,11 +31,6 @@ class CustomPagination(PageNumberPagination):
             'previous': self.get_previous_link(),
             'results': data,
         })
-
-class DepartmentViewSet(ReadOnlyModelViewSet):
-    queryset = Department.objects.all().order_by('name')
-    serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated, IsEmailVerified]
 
 class TicketViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsEmailVerified]

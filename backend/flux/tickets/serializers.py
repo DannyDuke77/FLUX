@@ -3,11 +3,6 @@ from rest_framework import serializers
 from accounts.models import Department
 from .models import Ticket, TicketStatusLog
 
-class DepartmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Department
-        fields = ['id', 'name']
-
 class TicketStatusLogSerializer(serializers.ModelSerializer):
     changed_by_name = serializers.CharField(source='changed_by.name', read_only=True)
     

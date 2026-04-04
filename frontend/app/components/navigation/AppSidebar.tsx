@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Menu,
   X,
-  User
+  User,
+  Settings
 } from "lucide-react"
 import ReportsButton from "./ReportsButton";
 
@@ -22,6 +23,7 @@ interface AppSidebarProps {
 const navItems = [
   { label: "Tickets", href: "/tickets", icon: Ticket },
   { label: "Register User", href: "/auth/register", icon: User },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 
@@ -128,16 +130,17 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ appUser }) => {
             }`}
           >
             
-            <div className={`space-y-1 mt-8 ${isOpen || isSmallScreen ? "w-[200px]" : "hidden w-0"}`}>
+            <div className={`space-y-1 transition-all duration-300 ${isOpen || isSmallScreen ? "w-[200px]" : "hidden w-0"}`}>
               <div className="">
                 <Image
-                  src="/blooming-logo.png"
-                  alt="Blooming Suites Logo"
+                  src={appUser.company_logo || "/logo-placeholder.png"}
+                  alt={appUser.company}
                   width={100}
                   height={50}
                   priority
                   sizes="100vw"
                   className="w-full px-2 bg-white rounded-lg"
+                  unoptimized
                 />
               </div>
               <p className="font-semibold text-center text-gray-400">Ticketing System</p>
@@ -168,19 +171,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ appUser }) => {
               </button>
           </>
           )}
-        </div>
-
-        <div className={`${isOpen || isSmallScreen ? "hidden w-0" : "w-auto"}`}>
-          <div className="">
-            <Image
-              src="/superior-logo-v2.png"
-              alt="Superior Hotels Kenya Logo"
-              width={100}
-              height={50}
-              sizes="100vw"
-              className="scale-100"
-            />
-          </div>
         </div>
 
 

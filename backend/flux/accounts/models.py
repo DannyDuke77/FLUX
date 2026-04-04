@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, UserManager, PermissionsMixin
 
 from .validators import normalize_kenyan_phone
-from companies.models import BaseCompanyModel
+from companies.models import BaseCompanyModel, Department
 
 # Create your models here.
 class CustomUserManager(UserManager):
@@ -21,6 +21,7 @@ class CustomUserManager(UserManager):
     def create_user(self, name=None, email=None, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
+        extra_fields.setdefault('created_by', None)
         return self._create_user(name, email, password, **extra_fields)
     
     def create_superuser(self, name=None, email=None, password=None, **extra_fields):
@@ -34,13 +35,6 @@ class CustomUserManager(UserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self._create_user(name, email, password, **extra_fields)
-    
-class Department(BaseCompanyModel):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.name
     
 class User(AbstractBaseUser, PermissionsMixin, BaseCompanyModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -59,6 +53,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseCompanyModel):
     is_staff = models.BooleanField(default=False)
 
     date_joined = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_users')
 
     objects = CustomUserManager()
 

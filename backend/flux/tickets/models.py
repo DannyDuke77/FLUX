@@ -6,7 +6,7 @@ from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from accounts.models import Department
+from companies.models import Department
 import random
 from companies.models import BaseCompanyModel
 
@@ -62,7 +62,7 @@ class Ticket(BaseCompanyModel):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
     priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
 
-    image = models.ImageField(upload_to='attachments/tickets', null=True, blank=True)
+    image = models.ImageField(upload_to='images/ticket_attachments/', null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

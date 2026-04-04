@@ -1,8 +1,10 @@
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
+
+from companies.models import Department
 
 from .serializers import UserDetailSerializer
 from .permissions import IsAdminUserCustom, IsEmailVerified
@@ -18,3 +20,4 @@ def create_object(request):
 def get_user(request):
     serializer = UserDetailSerializer(request.user)
     return JsonResponse(serializer.data)
+

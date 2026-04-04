@@ -4,21 +4,12 @@ import { cookies } from "next/headers";
 
 const DEBUG = process.env.NODE_ENV !== 'production';
 
-/**
- * SHARED COOKIE CONFIGURATION
- * -------------------------------------------------------------------------
- * HTTP (Local Network): Set 'secure: false'. Browsers reject 'secure' cookies 
- * over plain http://192.168.2.156.
- * * HTTPS (Production with SSL): Set 'secure: true'. This is required for 
- * modern security standards.
- * -------------------------------------------------------------------------
- */
 const getCookieOptions = (maxAge: number) => ({
     httpOnly: true,
-    secure: false, // <--- SET TO 'false' FOR HTTP / SET TO 'true' FOR HTTPS
+    secure: true, // <--- SET TO 'false' FOR HTTP / SET TO 'true' FOR HTTPS
     maxAge: maxAge,
     path: '/',
-    sameSite: 'lax' as const, // 'lax' is required for cross-site auth over HTTP
+    sameSite: 'lax' as const,
 });
 
 export async function handleLogin(userId: string, accessToken: string, refreshToken: string) {
@@ -33,9 +24,8 @@ export async function handleLogin(userId: string, accessToken: string, refreshTo
     // 7 Days for Refresh Token
     requestCookies.set('session_refresh_token', refreshToken, getCookieOptions(60 * 60 * 24 * 7));
 
-    if (DEBUG) {
-        console.log(`handleLogin: Cookies set for ${process.env.NEXT_PUBLIC_API_URL} (Secure: False)`);
-    }
+    console.log('Current Access Token:', accessToken);
+    console.log('Current Refresh Token:', refreshToken);
 }
 
 /** Clears all auth cookies */
@@ -79,7 +69,6 @@ export async function handleRefresh() {
             const requestCookies = await cookies();
             const accessToken = json.access;
 
-            // Update Access Token Cookie (Must match handleLogin security settings)
             requestCookies.set('session_access_token', accessToken, getCookieOptions(60 * 60));
 
             return accessToken;

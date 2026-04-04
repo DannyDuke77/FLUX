@@ -5,6 +5,7 @@ export type UserType = {
     name: string;
     department_id: string;
     is_admin: boolean;
+    company: string;
 }
 
 interface ReportsModalStore {

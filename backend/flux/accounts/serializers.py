@@ -5,8 +5,10 @@ from PIL import Image
 from rest_framework.exceptions import AuthenticationFailed
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress, EmailConfirmation
+from django.db import transaction
 
 from .models import User
+from companies.models import Department
 from .validators import normalize_kenyan_phone
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -17,8 +19,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['name'] = user.name
         token['email'] = user.email
         token['is_admin'] = user.is_admin
+        token['is_superuser'] = user.is_superuser
         token['department'] = user.department.name
         token['department_id'] = str(user.department.id)
+        token['company'] = str(user.company.name)
+        token['company_logo'] = str(user.company.image_url()) if user.company.logo else None
         token["sub"] = str(user.id)
         return token
     
@@ -69,21 +74,36 @@ class CustomRegisterSerializer(RegisterSerializer):
                 'password2': ['The two password fields did not match.']
             })
         return super().validate(attrs)
+    
+    def validate_department(self, value):
+        request = self.context.get('request')
 
+        try:
+            department = Department.objects.get(id=value)
+        except Department.DoesNotExist:
+            raise serializers.ValidationError("Department does not exist.")
+
+        if department.company != request.user.company:
+            raise serializers.ValidationError("Department must belong to your company.")
+
+        return value
+    
     def save(self, request):
-        adapter = get_adapter()
-        user = adapter.new_user(request)
-
-        self.cleaned_data = self.get_cleaned_data()
-
-        user.name = self.cleaned_data.get('name')
-        user.email = self.cleaned_data.get('email')
-        user.phone_number = self.cleaned_data.get('phone_number')
-        user.department_id = self.cleaned_data.get('department')
-
-        adapter.save_user(request, user, self)
-
-        return user
+        with transaction.atomic():
+            user = super().save(request)
+            
+            name = self.validated_data.get('name', '')
+            phone_number = self.validated_data.get('phone_number', '')
+            department_id = self.validated_data.get('department')
+            
+            user.name = name
+            user.phone_number = phone_number
+            user.department_id = department_id
+            user.company = request.user.company
+            
+            user.save()
+            
+            return user
     
 class UserDetailSerializer(serializers.ModelSerializer):
     department_id = serializers.SerializerMethodField()
@@ -93,4 +113,4 @@ class UserDetailSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ('id', 'name', 'email', 'phone_number', 'department', 'department_id', 'is_admin')
+        fields = ('id', 'name', 'email', 'phone_number', 'company', 'department', 'department_id', 'is_admin')
