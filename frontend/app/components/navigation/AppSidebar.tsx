@@ -233,10 +233,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ appUser }) => {
                 </Link>
               );
             })}
-            <ReportsButton 
-              user={appUser} 
-              className={`${isOpen || isSmallScreen ? "" : "-ml-3"}`}
-            />
           </nav>
         </div>
 

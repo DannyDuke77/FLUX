@@ -60,27 +60,22 @@ const apiService = {
     }
   },
 
-  post: async function (url: string, data: any): Promise<any> {
+  post: async (url: string, data: any): Promise<any> => {
     const headers: Record<string, string> = {};
 
-    // Only attach token if NOT logging in
+    // Attach token if not logging in
     if (!url.includes('/auth/login')) {
         const token = await getAccessToken();
-
-        if (token) {
-            headers["Authorization"] = `Bearer ${token}`;
-            if (DEBUG) console.log('TOKEN FOUND');
-        } else {
-            if (DEBUG) console.log('NO TOKEN');
-        }
+        if (token) headers["Authorization"] = `Bearer ${token}`;
     }
 
+    // Handle JSON vs FormData
     if (!(data instanceof FormData)) {
         headers["Content-Type"] = "application/json";
         data = JSON.stringify(data);
     }
 
-    if (DEBUG) console.log("🌐 Sending to:", `${API_URL}${url}`);
+    console.log("🌐 Posting to:", `${API_URL}${url}`);
 
     const response = await fetch(`${API_URL}${url}`, {
         method: "POST",
@@ -88,32 +83,50 @@ const apiService = {
         body: data,
     });
 
-    return response.json();
+    if (!response.ok) {
+        let errorData: any;
+        try {
+            const text = await response.text();
+            errorData = text ? JSON.parse(text) : { detail: response.statusText };
+        } catch {
+            errorData = { detail: response.statusText };
+        }
+        throw { response: { data: errorData } };
+    }
+
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
   },
 
-  patch: async function (url: string, data: any): Promise<any> {
-    const token = await getAccessToken();
+  patch: async (url: string, data: any): Promise<any> => {
     const headers: Record<string, string> = {};
+    const token = await getAccessToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    // If data is not FormData, treat it as JSON
     if (!(data instanceof FormData)) {
-      headers["Content-Type"] = "application/json";
-      data = JSON.stringify(data);
+        headers["Content-Type"] = "application/json";
+        data = JSON.stringify(data);
     }
-
-    if (DEBUG) console.log("🌐 Patching to:", `${API_URL}${url}`);
 
     const response = await fetch(`${API_URL}${url}`, {
-      method: "PATCH",
-      headers,
-      body: data,
+        method: "PATCH",
+        headers,
+        body: data,
     });
 
-    return response.json();
+    if (!response.ok) {
+        let errorData: any;
+        try {
+            const text = await response.text();
+            errorData = text ? JSON.parse(text) : { detail: response.statusText };
+        } catch {
+            errorData = { detail: response.statusText };
+        }
+        throw { response: { data: errorData } };
+    }
+
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
   },
 
   delete: async function (url: string): Promise<any> {

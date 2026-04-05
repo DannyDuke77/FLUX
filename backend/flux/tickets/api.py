@@ -70,7 +70,7 @@ class TicketViewSet(ModelViewSet):
         new_status = self.request.data.get('status')
         note = self.request.data.get('resolution_note', '').strip()
 
-        if instance.department == self.request.user.department:
+        if not self.request.user.is_admin and instance.department == self.request.user.department:
             raise ValidationError({"error": "You cannot change a ticket created by your department."})
 
         if new_status and new_status != old_status:
@@ -114,35 +114,66 @@ class TicketViewSet(ModelViewSet):
     @action(detail=False, methods=['get'], url_path='export_pdf')
     def export_pdf(self, request):
         queryset = self._get_filtered_report_queryset(request)
-        if request.GET.get('department') == 'all':
-            return ReportService.generate_pdf_report(queryset, request.user, 'all', None, request.GET.get('start'), request.GET.get('end'))
 
-        department_id = request.GET.get('department')
-        department = get_object_or_404(Department, id=department_id)
+        department_id = request.GET.get('department', 'all')
+
+        department_name = None
+        if department_id != 'all':
+            department = Department.objects.get(
+                id=department_id,
+                company=request.user.company
+            )
+            department_name = department.name
+
         return ReportService.generate_pdf_report(
-            queryset, 
+            queryset,
             request.user,
-            request.GET.get('department', 'all'),
-            department.name if department else None,
+            department_id,
+            department_name,
             request.GET.get('start'),
             request.GET.get('end')
         )
 
     def _get_filtered_report_queryset(self, request):
-        """Shared logic to filter tickets for both report types"""
         user = request.user
-        queryset = self.get_queryset().select_related('department', 'assigned_to')
-        
-        department = request.GET.get('department', 'all')
-        if user.is_admin and department != 'all':
-            queryset = queryset.filter(Q(department_id=department) | Q(assigned_to_id=department))
 
+        queryset = self.get_queryset().select_related('department', 'assigned_to')
+
+        department_id = request.GET.get('department', 'all')
         start_date = request.GET.get('start')
         end_date = request.GET.get('end')
+
+        if department_id != 'all':
+            try:
+                department = Department.objects.get(id=department_id, company=user.company)
+            except Department.DoesNotExist:
+                raise ValidationError({"department": "Invalid department"})
+
+            if user.is_admin:
+                queryset = queryset.filter(
+                    Q(department=department) | Q(assigned_to=department)
+                )
+            else:
+                if str(user.department.id) != str(department_id):
+                    raise ValidationError({"department": "Not allowed"})
+
+                queryset = queryset.filter(
+                    Q(department=user.department) | Q(assigned_to=user.department)
+                )
+
         if start_date and end_date:
             start = parse_date(start_date)
             end = parse_date(end_date)
-            if start and end:
-                queryset = queryset.filter(created_at__date__gte=start, created_at__date__lte=end)
-        
+
+            if not start or not end:
+                raise ValidationError({"date": "Invalid date format"})
+
+            if start > end:
+                raise ValidationError({"date": "Start date cannot be after end date"})
+
+            queryset = queryset.filter(
+                created_at__date__gte=start,
+                created_at__date__lte=end
+            )
+
         return queryset

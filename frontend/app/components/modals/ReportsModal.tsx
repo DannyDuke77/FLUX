@@ -8,6 +8,11 @@ import { ChevronDown } from "lucide-react";
 
 const DEBUG = process.env.NODE_ENV !== 'production';
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 const ReportsModal = () => {
   const { isOpen, close, user } = useReportsModal();
   const [rangeType, setRangeType] = useState<'all' | 'custom'>('all');
@@ -16,7 +21,7 @@ const ReportsModal = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const [departments, setDepartments] = useState([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -86,7 +91,7 @@ const ReportsModal = () => {
     try {
       setLoading(true);
 
-      const query = buildParams("csv");
+      const query = buildParams("pdf");
       const blob = await apiService.getBlob(`/api/tickets/export_pdf/?${query}`);
 
       const url = window.URL.createObjectURL(blob);
@@ -148,6 +153,7 @@ const ReportsModal = () => {
               type="date" 
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              min={startDate}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
@@ -166,7 +172,7 @@ const ReportsModal = () => {
               onChange={(e) => setSelectedDept(e.target.value)}
             >
               <option value="all">All Departments</option>
-                {departments.map((department: any) => (
+                {departments.map((department) => (
                     <option key={department.id} value={department.id}>
                         {department.name}
                     </option>
@@ -179,7 +185,7 @@ const ReportsModal = () => {
 
       <button 
         onClick={handleExportCsv}
-        type="submit"
+        type="button"
         disabled={loading}
         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all disabled:opacity-50"
       >
@@ -188,7 +194,7 @@ const ReportsModal = () => {
 
       <button 
         onClick={handleExportPdf}
-        type="submit"
+        type="button"
         disabled={loading}
         className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all disabled:opacity-50"
       >

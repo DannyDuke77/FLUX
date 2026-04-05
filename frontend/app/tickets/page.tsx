@@ -21,7 +21,6 @@ import {
   Building2,
   Hash
 } from "lucide-react";
-import Link from "next/link";
 import apiService from "../services/apiService";
 import AddTicketButton from "../components/navigation/AddTicketButton";
 import ViewTicketButton from "../components/navigation/ViewTicketButton";
@@ -30,6 +29,7 @@ import { useTicketSocket } from "../hooks/useTicketSocket";
 import { UserType } from "../hooks/useReportsModal";
 import useResolutionModal from "../hooks/useResolutionModal";
 import ResolutionModal from "../components/modals/ResolutionModal";
+import ReportsButton from "../components/navigation/ReportsButton";
 
 const DEBUG = process.env.NODE_ENV !== 'production';
 
@@ -149,7 +149,7 @@ const TicketsPage = () => {
     setTime(new Date().toLocaleTimeString())
   }, [])
 
-  const [user, setUser] = useState<UserType | null>();
+  const [user, setUser] = useState<any | null>();
 
   const resolutionModal = useResolutionModal();
 
@@ -374,6 +374,7 @@ const TicketsPage = () => {
             </div>
             <div className="flex items-center gap-3">
               <AddTicketButton />
+              <ReportsButton user={user} />
             </div>
           </div>
 

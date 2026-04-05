@@ -31,6 +31,8 @@ const DepartmentSettings = () => {
     const [hasPrev, setHasPrev] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+
+
     const fetchDepartments = async (page: number = 1) => {
         setLoading(true);
         try {
@@ -90,7 +92,7 @@ const DepartmentSettings = () => {
     };
 
     const handleDeleteDepartment = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this department?")) return;
+        if (!confirm("Are you sure you want to delete this department? ")) return;
         
         try {
             await apiService.patch(`/api/departments/${id}/`, { is_active: false });

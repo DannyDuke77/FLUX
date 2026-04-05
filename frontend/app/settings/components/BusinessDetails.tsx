@@ -8,7 +8,11 @@ import { UserType } from "@/app/hooks/useReportsModal";
 
 const BusinessDetails = () => {
     const [user, setUser] = useState<UserType | null>();
-    const [form, setForm] = useState({ company_name: "", email: "", phone: "" });
+    const [form, setForm] = useState({ 
+        name: "", 
+        email: "", 
+        phone_number: "" 
+    });
     const [initialForm, setInitialForm] = useState<any>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -16,8 +20,8 @@ const BusinessDetails = () => {
     const [errors, setErrors] = useState<any>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const loadData = async () => {
@@ -31,9 +35,9 @@ const BusinessDetails = () => {
                     console.log("Fetched company data:", companyData);
                     
                     setForm({
-                        company_name: companyData?.name ?? "",
+                        name: companyData?.name ?? "",
                         email: companyData?.email ?? "",
-                        phone: companyData?.phone_number ?? "",
+                        phone_number: companyData?.phone_number ?? "",
                     });
                     setInitialForm(companyData);
                     setCurrentLogo(companyData?.logo_url ?? null);
@@ -51,7 +55,6 @@ const BusinessDetails = () => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
-        // Clear error for this field when user starts typing
         if (errors[e.target.name]) {
             setErrors({ ...errors, [e.target.name]: null });
         }
@@ -93,30 +96,41 @@ const BusinessDetails = () => {
         setErrors({});
         setErrorMessage(null);
         setSuccessMessage(null);
-        
-        let payload: any = logoFile ? new FormData() : { ...form };
-        
-        if (logoFile) {
+
+        let payload: any;
+        const isFormData = !!logoFile;
+
+        if (isFormData) {
+            payload = new FormData();
             Object.entries(form).forEach(([key, value]) => payload.append(key, value));
-            payload.append("logo", logoFile);
+            if (logoFile) payload.append("logo", logoFile);
+        } else {
+            payload = { ...form };
         }
-        
+
         try {
-            await apiService.patch(`/api/companies/${user?.company}/`, payload);
+            const response = await apiService.patch(`/api/companies/${user?.company}/`, payload);
+
             setInitialForm({ ...form });
-            
             if (logoFile) {
                 setCurrentLogo(logoPreview);
                 setLogoFile(null);
                 setLogoPreview(null);
+
+                setSuccessMessage(
+                    "Profile updated! Logo changes will reflect the next time you log in."
+                );
+            } else {
+                setSuccessMessage("Business profile updated successfully!");
             }
-            
-            setSuccessMessage("Business profile updated successfully!");
+
             setTimeout(() => setSuccessMessage(null), 3000);
         } catch (err: any) {
-            console.error("Error saving business details:", err);
-            setErrorMessage(err.response?.data?.message || "Failed to save business details");
-            setErrors(err?.response?.data ?? {});
+            const backendErrors = err?.response?.data || {};
+            setErrors(backendErrors);
+            setErrorMessage(
+                backendErrors.detail || "Failed to save business details. Please fix the errors."
+            );
         } finally {
             setSaving(false);
         }
@@ -168,46 +182,52 @@ const BusinessDetails = () => {
             )}
 
             {/* Logo Upload Section */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-5 bg-gray-800/30 rounded-xl border border-gray-700/50">
-                <div className="relative h-24 w-24 rounded-xl border-2 border-dashed border-gray-600 bg-gray-900/50 flex items-center justify-center overflow-hidden group hover:border-blue-500/50 transition-colors">
-                    {logoPreview || currentLogo ? (
-                        <Image 
-                            src={logoPreview ?? currentLogo!} 
-                            alt="Company Logo" 
-                            fill 
-                            className="object-contain p-2" 
-                            unoptimized 
-                        />
-                    ) : (
-                        <Upload className="w-8 h-8 text-gray-500" />
-                    )}
+            <div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-5 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                    <div className="relative h-24 w-24 rounded-xl border-2 border-dashed border-gray-600 bg-gray-900/50 flex items-center justify-center overflow-hidden group hover:border-blue-500/50 transition-colors">
+                        {logoPreview || currentLogo ? (
+                            <Image 
+                                src={logoPreview ?? currentLogo!} 
+                                alt="Company Logo" 
+                                fill 
+                                className="object-contain p-2" 
+                                unoptimized 
+                            />
+                        ) : (
+                            <Upload className="w-8 h-8 text-gray-500" />
+                        )}
+                    </div>
+                    <div className="flex-1">
+                        <h4 className="font-semibold text-white text-sm mb-1">Company Logo</h4>
+                        <p className="text-xs text-gray-500 mb-3">PNG, JPG up to 2MB</p>
+                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-medium transition-all">
+                            <Upload className="w-4 h-4" />
+                            Choose Logo
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleLogoChange} 
+                                className="hidden" 
+                            />
+                        </label>
+                        {logoPreview && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLogoFile(null);
+                                    setLogoPreview(null);
+                                }}
+                                className="ml-3 text-xs text-red-400 hover:text-red-300"
+                            >
+                                Remove
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <div className="flex-1">
-                    <h4 className="font-semibold text-white text-sm mb-1">Company Logo</h4>
-                    <p className="text-xs text-gray-500 mb-3">PNG, JPG up to 2MB</p>
-                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-medium transition-all">
-                        <Upload className="w-4 h-4" />
-                        Choose Logo
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleLogoChange} 
-                            className="hidden" 
-                        />
-                    </label>
-                    {logoPreview && (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setLogoFile(null);
-                                setLogoPreview(null);
-                            }}
-                            className="ml-3 text-xs text-red-400 hover:text-red-300"
-                        >
-                            Remove
-                        </button>
-                    )}
-                </div>
+                {errors.logo && (
+                    <p className="mt-2 text-xs text-red-400"><AlertCircle className="w-4 h-4 inline-block mr-2" />{errors.logo}</p>
+                )}
             </div>
 
             {/* Form Fields */}
@@ -220,15 +240,15 @@ const BusinessDetails = () => {
                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                         <input 
                             name="company_name" 
-                            value={form.company_name} 
+                            value={form.name} 
                             onChange={handleChange} 
                             className={inputClass} 
                             placeholder="Enter company name"
                             required
                         />
                     </div>
-                    {errors.company_name && (
-                        <p className="mt-1 text-xs text-red-400">{errors.company_name}</p>
+                    {errors.name && (
+                        <p className="mt-1 text-xs text-red-400"><AlertCircle className="w-4 h-4 inline-block mr-2" />{errors.name}</p>
                     )}
                 </div>
 
@@ -249,7 +269,7 @@ const BusinessDetails = () => {
                         />
                     </div>
                     {errors.email && (
-                        <p className="mt-1 text-xs text-red-400">{errors.email}</p>
+                        <p className="mt-1 text-xs text-red-400"><AlertCircle className="w-4 h-4 inline-block mr-2" />{errors.email}</p>
                     )}
                 </div>
 
@@ -260,15 +280,15 @@ const BusinessDetails = () => {
                     <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                         <input 
-                            name="phone" 
-                            value={form.phone} 
+                            name="phone_number" 
+                            value={form.phone_number} 
                             onChange={handleChange} 
                             className={inputClass} 
                             placeholder="+1 (555) 000-0000"
                         />
                     </div>
-                    {errors.phone && (
-                        <p className="mt-1 text-xs text-red-400">{errors.phone}</p>
+                    {errors.phone_number && (
+                        <p className="mt-1 text-xs text-red-400"><AlertCircle className="w-4 h-4 inline-block mr-2" />{errors.phone_number}</p>
                     )}
                 </div>
             </div>

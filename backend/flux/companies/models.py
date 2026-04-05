@@ -1,7 +1,8 @@
 from django.db import models
 import uuid
-
 from django.conf import settings
+
+from accounts.validators import normalize_kenyan_phone
 
 # Create your models here.
 class Company(models.Model):
@@ -24,6 +25,11 @@ class Company(models.Model):
     class Meta:
         ordering = ['-created_at']
         verbose_name_plural = 'Companies'
+
+    def clean(self):
+        super().clean()
+        if self.phone_number:
+            self.phone_number = normalize_kenyan_phone(self.phone_number)
 
     def image_url(self):
         if self.logo:

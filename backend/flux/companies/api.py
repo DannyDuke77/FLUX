@@ -41,14 +41,14 @@ class CompanyViewSet(ModelViewSet):
         serializer.save()
 
 class DepartmentViewSet(ModelViewSet):
-    queryset = Department.objects.all().filter
+    queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
     permission_classes = [IsAuthenticated, IsAdminUserCustom]
     pagination_class = CustomPagination
 
     def get_queryset(self):
         user = self.request.user
-        return Department.objects.filter(company=user.company) if not user.is_superuser else Department.objects.all()
+        return Department.objects.filter(company=user.company, is_active=True)
     
     def perform_create(self, serializer):
         serializer.save(

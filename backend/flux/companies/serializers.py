@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from PIL import Image
+from io import BytesIO
+from django.core.files.base import ContentFile
 
+from accounts.validators import normalize_kenyan_phone
 from .models import Company, Department
 
 class CompanySerializer(serializers.ModelSerializer):
@@ -12,19 +15,37 @@ class CompanySerializer(serializers.ModelSerializer):
 
     def validate_logo(self, value):
         max_size = 2 * 1024 * 1024  # 2MB
-        if value and value.size > max_size:
-            raise serializers.ValidationError("Logo size must be less than 2MB.")
-        
-        img = Image.open(value)
-        max_width, max_height = 500, 500
-        if img.width > max_width or img.height > max_height:
-            raise serializers.ValidationError(f"Logo dimensions must be at most {max_width}x{max_height} pixels.")
-        
-        if value and not value.name.lower().endswith(('.jpg', '.jpeg', '.png')):
-            raise serializers.ValidationError("Logo must be a JPG or PNG image.")
-        
-        return value
-        
+
+        if not value:
+            return value
+
+        if value.size > max_size:
+            raise serializers.ValidationError("Logo must be under 2MB.")
+
+        if value.content_type not in ['image/jpeg', 'image/png']:
+            raise serializers.ValidationError("Only JPG and PNG images are allowed.")
+
+        try:
+            img = Image.open(value)
+        except Exception:
+            raise serializers.ValidationError("Invalid image file.")
+
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+
+        max_dimension = 500
+        if img.width > max_dimension or img.height > max_dimension:
+            img.thumbnail((max_dimension, max_dimension))
+
+        buffer = BytesIO()
+        img.save(buffer, format='JPEG', quality=85)
+        buffer.seek(0)
+
+        return ContentFile(buffer.read(), name=value.name)
+    
+    def validate_phone_number(self, value):
+        return normalize_kenyan_phone(value)
+    
     def get_image_url(self, obj):
         return obj.image_url() if obj.logo else None
     

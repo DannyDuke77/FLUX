@@ -16,11 +16,9 @@ const ReportsButton: React.FC<ReportsButtonProps> = ({ user, className }) => {
     return (
         <button 
             onClick={() => reportsModal.open(user)}
-            className={`flex items-center w-full px-4 py-3 gap-3 rounded-xl transition-all duration-300 group relative text-gray-400 hover:bg-gray-700/50 hover:text-white ${className}`}
+            className="flex items-center justify-center gap-2 bg-cyan-700 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg font-medium"
         >
-          <div className={`p-2 rounded-lg bg-gray-700/30`}>
-            <Download className="w-5 h-5" />
-          </div>
+          <Download className="w-5 h-5" />
           Reports
         </button>
     )
