@@ -1,8 +1,6 @@
 import { cookies } from "next/headers"
-import { jwtDecode } from "jwt-decode"
-import { jwtVerify, decodeProtectedHeader } from "jose";
+import { jwtVerify } from "jose";
 
-const DEBUG = process.env.NODE_ENV !== 'production';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -15,6 +13,7 @@ export type AuthUser = {
   department: string
   department_id: string
   company: string
+  company_id: string
   company_logo?: string
   exp: number
 }
@@ -30,7 +29,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
 
         const decoded = payload as any;
 
-        if (DEBUG) console.log('Verified department:', decoded.department)
+        // console.log('Verified department:', decoded.department)
 
         // Check if token is expired
         if (decoded.exp * 1000 < Date.now()) return null
@@ -49,6 +48,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
             department: decoded.department,
             department_id: decoded.department_id,
             company: decoded.company,
+            company_id: decoded.company_id,
             company_logo: decoded.company_logo,
             exp: decoded.exp,
         }

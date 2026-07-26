@@ -6,8 +6,7 @@ import { Upload, Mail, Phone, MapPin, Landmark, Save, Loader2, Building2, X, Che
 import apiService from "@/app/services/apiService";
 import { UserType } from "@/app/hooks/useReportsModal";
 
-const BusinessDetails = () => {
-    const [user, setUser] = useState<UserType | null>();
+const BusinessDetails = ({ user }: { user: any }) => {
     const [form, setForm] = useState({ 
         name: "", 
         email: "", 
@@ -27,12 +26,10 @@ const BusinessDetails = () => {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const userData = await apiService.get('/api/auth/me/');
-                setUser(userData);
 
-                if (userData?.company) {
-                    const companyData = await apiService.get(`/api/companies/${userData.company}/`);
-                    console.log("Fetched company data:", companyData);
+                if (user?.company) {
+                    const companyData = await apiService.get(`/api/companies/${user.company_id}/`);
+                    //console.log("Fetched company data:", companyData);
                     
                     setForm({
                         name: companyData?.name ?? "",
@@ -40,7 +37,7 @@ const BusinessDetails = () => {
                         phone_number: companyData?.phone_number ?? "",
                     });
                     setInitialForm(companyData);
-                    setCurrentLogo(companyData?.logo_url ?? null);
+                    setCurrentLogo(companyData?.logo ?? null);
                 }
             } catch (error) {
                 console.error("Error loading data:", error);
@@ -83,22 +80,34 @@ const BusinessDetails = () => {
 
     const hasChanges = () => {
         if (!initialForm) return false;
+
         return JSON.stringify(form) !== JSON.stringify({
-            company_name: initialForm.name ?? "",
+            name: initialForm.name ?? "",
             email: initialForm.email ?? "",
-            phone: initialForm.phone_number ?? "",
+            phone_number: initialForm.phone_number ?? "",
         }) || logoFile !== null;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        let payload: any;
+        const isFormData = !!logoFile;
+
+        const nameChanged = form.name !== (initialForm?.name ?? "");
+
+        if (nameChanged) {
+            const message = `You are changing the company name from "${initialForm?.name}" to "${form.name}".\n\nThis will immediately change the branding footprint printed on all system-generated documents and PDFs.\n\nAre you sure you want to proceed?`;
+            const confirmed = window.confirm(message);
+            
+            // If they click 'Cancel', abort the save operations completely
+            if (!confirmed) return;
+        }
+
         setSaving(true);
         setErrors({});
         setErrorMessage(null);
         setSuccessMessage(null);
-
-        let payload: any;
-        const isFormData = !!logoFile;
 
         if (isFormData) {
             payload = new FormData();
@@ -109,7 +118,7 @@ const BusinessDetails = () => {
         }
 
         try {
-            const response = await apiService.patch(`/api/companies/${user?.company}/`, payload);
+            const response = await apiService.patch(`/api/companies/${user?.company_id}/`, payload);
 
             setInitialForm({ ...form });
             if (logoFile) {
@@ -124,7 +133,6 @@ const BusinessDetails = () => {
                 setSuccessMessage("Business profile updated successfully!");
             }
 
-            setTimeout(() => setSuccessMessage(null), 3000);
         } catch (err: any) {
             const backendErrors = err?.response?.data || {};
             setErrors(backendErrors);
@@ -184,7 +192,7 @@ const BusinessDetails = () => {
             {/* Logo Upload Section */}
             <div>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-5 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-5 bg-gray-800/30 rounded-xl border border-gray-700/50 hover:border-blue-500/60 hover:border-dashed">
                     <div className="relative h-24 w-24 rounded-xl border-2 border-dashed border-gray-600 bg-gray-900/50 flex items-center justify-center overflow-hidden group hover:border-blue-500/50 transition-colors">
                         {logoPreview || currentLogo ? (
                             <Image 
@@ -198,19 +206,23 @@ const BusinessDetails = () => {
                             <Upload className="w-8 h-8 text-gray-500" />
                         )}
                     </div>
-                    <div className="flex-1">
-                        <h4 className="font-semibold text-white text-sm mb-1">Company Logo</h4>
-                        <p className="text-xs text-gray-500 mb-3">PNG, JPG up to 2MB</p>
-                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-medium transition-all">
-                            <Upload className="w-4 h-4" />
-                            Choose Logo
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                onChange={handleLogoChange} 
-                                className="hidden" 
-                            />
-                        </label>
+                    <div className="">
+                        <h4 className="text-lg font-bold text-white mb-1 hover:text-blue-500">{user?.company}</h4>
+
+                        <div className="space-y-1">
+                            <p className="text-xs text-gray-500">PNG, JPG up to 2MB</p>
+                            <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-medium transition-all">
+                                <Upload className="w-4 h-4" />
+                                Choose Logo
+                                <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={handleLogoChange} 
+                                    className="hidden" 
+                                />
+                            </label>
+                        </div>
+                        
                         {logoPreview && (
                             <button
                                 type="button"
@@ -220,7 +232,7 @@ const BusinessDetails = () => {
                                 }}
                                 className="ml-3 text-xs text-red-400 hover:text-red-300"
                             >
-                                Remove
+                                Undo changes
                             </button>
                         )}
                     </div>
@@ -239,7 +251,7 @@ const BusinessDetails = () => {
                     <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                         <input 
-                            name="company_name" 
+                            name="name" 
                             value={form.name} 
                             onChange={handleChange} 
                             className={inputClass} 

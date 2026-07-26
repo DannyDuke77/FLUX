@@ -5,13 +5,53 @@ from django.utils import timezone
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import Image
-from django.contrib.staticfiles import finders
 from reportlab.platypus import Image
+import urllib
+from django.core.files.storage import default_storage
 
 class ReportService:
+    @staticmethod
+    def _get_company_logo_flowable(company, width=100, height=30):
+        styles = getSampleStyleSheet()
+        fallback_style = ParagraphStyle(
+            'LogoFallback',
+            parent=styles['Heading2'],
+            fontSize=22,
+            textColor=colors.HexColor('#1F2937'),
+            fontName='Helvetica-Bold',
+        )
+        
+        if not company or not company.logo:
+            return Paragraph(company.name if company else 'No Company', fallback_style)
+            
+        try:
+            try:
+                logo_file = default_storage.open(company.logo.name, 'rb')
+                img_data = BytesIO(logo_file.read())
+                logo_file.close()
+            except Exception:
+                url = company.image_url()
+                if not url:
+                    raise ValueError("No valid image URL found")
+                req = urllib.request.Request(
+                    url, 
+                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                )
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    img_data = BytesIO(response.read())
+            
+            logo_img = Image(img_data, width=width, height=height)
+            logo_img.hAlign = 'LEFT'
+            return logo_img
+            
+        except Exception as e:
+            return Paragraph(company.name, fallback_style)
+        
     @staticmethod
     def generate_csv_report(queryset, user):
         response = HttpResponse(content_type='text/csv')
@@ -36,9 +76,9 @@ class ReportService:
         return response
 
     @staticmethod
-    def generate_pdf_report(queryset, user, department_filter, department_filter_name, start_date, end_date):
+    def generate_pdf_report(queryset, user, department_filter_name, start_date, end_date):
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
+        doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=20, bottomMargin=36)
         elements = []
         styles = getSampleStyleSheet()
 
@@ -63,9 +103,8 @@ class ReportService:
         table_header = ParagraphStyle('THeader', parent=styles['Normal'], fontSize=9, textColor=colors.white, alignment=1, fontName='Helvetica-Bold')
         cell_style = ParagraphStyle('TCell', parent=styles['Normal'], fontSize=8)
 
-        # ---------------- HEADER (SIDE-BY-SIDE) ----------------
-        logo_path = finders.find('blooming-logo.png')
-        logo = Image(logo_path, width=100, height=30)
+        # ---------------- HEADER ----------------
+        logo = ReportService._get_company_logo_flowable(user.company, width=120, height=100)
         logo.hAlign = 'LEFT'
 
         header_table_data = [[
@@ -133,146 +172,260 @@ class ReportService:
         response = HttpResponse(buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
+    
+    @staticmethod
+    def _add_footer(canvas, doc):
+        canvas.saveState()
+
+        footer_text = (
+            "Generated electronically by FLUX Ticketing System. "
+            "This document serves as an official system-generated record "
+            "of ticket activity and status at the time of generation."
+        )
+
+        page_width = doc.pagesize[0]
+
+        # Divider line
+        canvas.setStrokeColor(colors.HexColor("#CBD5E1"))
+        canvas.line(
+            doc.leftMargin,
+            15 * mm,
+            page_width - doc.rightMargin,
+            15 * mm
+        )
+
+        # Footer text
+        canvas.setFont("Helvetica", 8)
+        canvas.setFillColor(colors.HexColor("#64748B"))
+        canvas.drawCentredString(
+            page_width / 2,
+            10 * mm,
+            footer_text
+        )
+
+        canvas.restoreState()
 
     @staticmethod
-    def generate_single_ticket_pdf(ticket):
+    def generate_single_ticket_pdf(ticket, user=None):
         buffer = BytesIO()
 
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            leftMargin=50,
-            rightMargin=50,
-            topMargin=60,
-            bottomMargin=50
+            leftMargin=40,
+            rightMargin=40,
+            topMargin=20,
+            bottomMargin=40
         )
 
         elements = []
         styles = getSampleStyleSheet()
 
-        # ---------------- CUSTOM STYLES ----------------
-        title_style = ParagraphStyle(
-            'TitleStyle',
+        PRIMARY_TEXT = colors.HexColor('#0F172A')
+        SECONDARY_TEXT = colors.HexColor('#475569')
+        LIGHT_BORDER = colors.HexColor('#E2E8F0')
+        ROW_ALT_BG = colors.HexColor('#F8FAFC')
+        HEADER_BG = colors.HexColor('#1E293B')
+
+        company_style = ParagraphStyle(
+            'DocCompanyStyle',
             parent=styles['Heading1'],
-            fontSize=22,
-            textColor=colors.HexColor('#1F2937'),
-            alignment=1,  # center
-            spaceAfter=10
+            fontName='Helvetica-Bold',
+            fontSize=18,
+            textColor=PRIMARY_TEXT,
+            spaceAfter=4
         )
 
-        meta_style = ParagraphStyle(
-            'MetaStyle',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=colors.grey,
+        ticket_id_style = ParagraphStyle(
+            'DocTicketIdStyle',
+            parent=styles['Heading2'],
+            fontName='Helvetica-Bold',
+            fontSize=14,
+            textColor=colors.HexColor('#2563EB'),
             spaceAfter=2
         )
 
+        meta_style = ParagraphStyle(
+            'DocMetaStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9,
+            textColor=SECONDARY_TEXT,
+            leading=12
+        )
+
         section_header = ParagraphStyle(
-            'SectionHeader',
+            'DocSectionHeader',
             parent=styles['Heading2'],
-            fontSize=13,
-            textColor=colors.HexColor('#111827'),
-            spaceBefore=18,
-            spaceAfter=10
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            textColor=PRIMARY_TEXT,
+            spaceBefore=14,
+            spaceAfter=8,
+            keepWithNext=True
         )
 
         label_style = ParagraphStyle(
-            'LabelStyle',
+            'DocLabelStyle',
             parent=styles['Normal'],
-            fontSize=10,
             fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#374151')
+            fontSize=9.5,
+            textColor=SECONDARY_TEXT
         )
 
         value_style = ParagraphStyle(
-            'ValueStyle',
+            'DocValueStyle',
             parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.HexColor('#1F2937')
+            fontName='Helvetica',
+            fontSize=9.5,
+            textColor=PRIMARY_TEXT,
+            leading=14
         )
 
-        # ---------------- HEADER (SIDE-BY-SIDE) ----------------
-        logo_path = finders.find('blooming-logo.png')
-        logo = Image(logo_path, width=100, height=30)
+        th_style = ParagraphStyle(
+            'DocTableHeaderStyle',
+            parent=value_style,
+            fontName='Helvetica-Bold',
+            textColor=colors.white
+        )
+
+        logo = ReportService._get_company_logo_flowable(ticket.department.company, width=90, height=45)
         logo.hAlign = 'LEFT'
 
-        header_table_data = [[
+        company = ticket.department.company
+        header_left = [
             logo,
-            [
-                Paragraph(f"Ticket: {ticket.ticket_number}", title_style),
-                Paragraph(f"Generated: {timezone.now().strftime('%d %B %Y')}", meta_style)
-            ]
-        ]]
-
-        header_table = Table(header_table_data, colWidths=[doc.width * 0.4, doc.width * 0.6])
-        header_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-        ]))
-
-        elements.append(header_table)
-        elements.append(Spacer(1, 20))
-
-        # ---------------- CORE DETAILS SECTION ----------------
-        elements.append(Paragraph("Ticket Information", section_header))
-
-        details_data = [
-            [Paragraph("Title", label_style), Paragraph(ticket.title, value_style)],
-            [Paragraph("Priority", label_style), Paragraph(ticket.get_priority_display(), value_style)],
-            [Paragraph("Status", label_style), Paragraph(ticket.get_status_display(), value_style)],
-            [Paragraph("From Department", label_style), Paragraph(ticket.department.name, value_style)],
-            [Paragraph("Assigned To", label_style), Paragraph(ticket.assigned_to.name, value_style)],
-            [Paragraph("Created At", label_style), Paragraph(ticket.created_at.strftime('%d-%m-%Y %H:%M'), value_style)],
+            Spacer(1, 6),
+            Paragraph(company.name, company_style),
+            Paragraph(f"{company.email} | {company.phone_number}", meta_style),
         ]
 
-        details_table = Table(details_data, colWidths=[doc.width * 0.3, doc.width * 0.7])
+        header_right = [
+            Paragraph(f"TICKET #{ticket.ticket_number}", ticket_id_style),
+            Paragraph(f"System Generated Ticket Report", meta_style),
+            Spacer(1, 4),
+            Paragraph(f"<b>Generated By:</b> {user.name} ({user.department.name})", meta_style),
+            Paragraph(f"<b>User Email:</b> {user.email}", meta_style),
+            Paragraph(f"<b>Generated At:</b> {timezone.now().strftime('%d %B %Y at %H:%M')}", meta_style)
+        ]
+
+        header_table = Table([[header_left, header_right]], colWidths=[doc.width * 0.55, doc.width * 0.45])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 15))
+
+        # Decorative Horizontal Rule Divider Line
+        divider = Table([['']], colWidths=[doc.width], rowHeights=[1])
+        divider.setStyle(TableStyle([('LINEBELOW', (0, 0), (-1, -1), 1, LIGHT_BORDER)]))
+        elements.append(divider)
+        elements.append(Spacer(1, 15))
+
+        COLOR_TEXT_DARK = colors.HexColor('#1F2937')
+        COLOR_TEXT_MEDIUM = colors.HexColor('#374151')
+        COLOR_BORDER = colors.HexColor('#E5E7EB')
+        COLOR_HEADER_BG = colors.HexColor('#EFF6FF')
+
+        priority_colors = {
+            'critical': colors.HexColor('#DC2626'),
+            'high': colors.HexColor('#EA580C'),
+            'medium': colors.HexColor('#F59E0B'),
+            'low': colors.HexColor('#10B981'),
+        }
+        priority_display = ticket.get_priority_display()
+        priority_color = priority_colors.get(ticket.priority, COLOR_TEXT_MEDIUM)
+        
+        # Status color mapping
+        status_colors = {
+            'open': colors.HexColor('#10B981'),
+            'in_progress': colors.HexColor('#3B82F6'),
+            'resolved': colors.HexColor('#8B5CF6'),
+            'closed': colors.HexColor('#6B7280'),
+        }
+        status_display = ticket.get_status_display()
+        status_color = status_colors.get(ticket.status, COLOR_TEXT_MEDIUM)
+
+        # Ticket Details
+        elements.append(Spacer(1, -15))
+        elements.append(Paragraph("Ticket Details", section_header))
+        details_data = [
+        ["TITLE", ticket.title],
+        ["PRIORITY", Paragraph(
+            f'<font color="{priority_color.hexval()}"><b>{priority_display}</b></font>',
+            value_style
+        )],
+        ["STATUS", Paragraph(
+            f'<font color="{status_color.hexval()}"><b>{status_display}</b></font>',
+            value_style
+        )],
+        ["FROM DEPARTMENT", ticket.department.name],
+        ["TO DEPARTMENT", ticket.assigned_to.name if ticket.assigned_to else "Unassigned"],
+        ["OPENED BY", ticket.created_by.name if ticket.created_by else "System"],
+        ["CREATED AT", ticket.created_at.strftime('%d %B %Y at %H:%M')],
+        ]
+        
+        details_table = Table(
+            details_data, 
+            colWidths=[doc.width * 0.25, doc.width * 0.75],
+            rowHeights=18
+        )
         details_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.whitesmoke),
-            ('BOX', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-            ('INNERGRID', (0, 0), (-1, -1), 0.3, colors.lightgrey),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            # Header styling
+            ('BACKGROUND', (0, 0), (0, -1), COLOR_HEADER_BG),
+            ('TEXTCOLOR', (0, 0), (0, -1), COLOR_TEXT_MEDIUM),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (0, -1), 10),
+            # Content styling
+            ('TEXTCOLOR', (1, 0), (1, -1), COLOR_TEXT_DARK),
+            ('FONTSIZE', (1, 0), (1, -1), 10),
+            # Borders
+            ('GRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            # Padding
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        elements.append(details_table)
+        elements.append(Spacer(1, 20))
+
+        # Description Section
+        elements.append(Paragraph("Description", section_header))
+        desc_content = Paragraph(ticket.description or "No description provided.", value_style)
+        desc_table = Table([[desc_content]], colWidths=[doc.width])
+        desc_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), ROW_ALT_BG),
+            ('BOX', (0, 0), (-1, -1), 1, LIGHT_BORDER),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
+        elements.append(desc_table)
 
-        elements.append(details_table)
-
-        elements.append(Spacer(1, 16))
-
-        # ---------------- DESCRIPTION ----------------
-        elements.append(Paragraph("Description", section_header))
-
-        elements.append(
-            Table(
-                [[Paragraph(ticket.description or "No description provided.", value_style)]],
-                colWidths=[doc.width]
-            )
-        )
-
-        elements.append(Spacer(1, 18))
-
-        # ---------------- STATUS HISTORY ----------------
-        elements.append(Paragraph("Status History", section_header))
-
+        # Lifecycle Activity Logs
+        elements.append(Paragraph("Ticket Lifecycle Activity Logs", section_header))
         logs = ticket.status_logs.all().select_related('changed_by')
 
         if logs.exists():
             log_data = [[
-                Paragraph("<b>Old Status</b>", value_style),
-                Paragraph("<b>New Status</b>", value_style),
-                Paragraph("<b>Changed By</b>", value_style),
-                Paragraph("<b>Date/Time</b>", value_style),
-                Paragraph("<b>Notes</b>", value_style),
+                Paragraph("Old Status", th_style),
+                Paragraph("New Status", th_style),
+                Paragraph("Changed By", th_style),
+                Paragraph("Timestamp", th_style),
+                Paragraph("Note", th_style),
             ]]
 
             for log in logs:
                 log_data.append([
                     Paragraph(log.old_status.replace('_', ' ').title(), value_style),
                     Paragraph(log.new_status.replace('_', ' ').title(), value_style),
-                    Paragraph(log.changed_by.name if log.changed_by else "System", value_style),
+                    Paragraph(log.changed_by.name if log.changed_by else "System Engine", value_style),
                     Paragraph(log.changed_at.strftime('%d-%m-%Y %H:%M'), value_style),
                     Paragraph(log.note or "-", value_style),
                 ])
@@ -280,48 +433,39 @@ class ReportService:
             log_table = Table(
                 log_data,
                 colWidths=[
-                    doc.width * 0.15, 
-                    doc.width * 0.15, 
-                    doc.width * 0.20, 
-                    doc.width * 0.20, 
-                    doc.width * 0.30
+                    doc.width * 0.16, 
+                    doc.width * 0.16, 
+                    doc.width * 0.18, 
+                    doc.width * 0.18, 
+                    doc.width * 0.32
                 ],
                 repeatRows=1
             )
 
             log_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#D4D4D4")),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1),
-                [colors.whitesmoke, colors.transparent]),
-                ('GRID', (0, 0), (-1, -1), 0.3, colors.lightgrey),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-                ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('BACKGROUND', (0, 0), (-1, 0), HEADER_BG),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, ROW_ALT_BG]),
+                ('BOX', (0, 0), (-1, -1), 0.5, LIGHT_BORDER),
+                ('INNERGRID', (0, 0), (-1, -1), 0.3, LIGHT_BORDER),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 7),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ]))
-
             elements.append(log_table)
-
         else:
-            elements.append(Paragraph(
-                "No status changes recorded for this ticket.",
-                value_style
-            ))
+            elements.append(Paragraph("No activity logs found for this ticket.", meta_style))
 
-        # ---------------- FOOTER ----------------
-        elements.append(Spacer(1, 25))
 
-        elements.append(Paragraph(
-            "Generated by FLUX Ticketing System",
-            meta_style
-        ))
-
-        doc.build(elements)
+        doc.build(
+            elements,
+            onFirstPage=ReportService._add_footer,
+            onLaterPages=ReportService._add_footer,
+        )
         buffer.seek(0)
 
-        filename = f"Ticket_{ticket.ticket_number}_Details.pdf"
+        filename = f"Ticket_{ticket.ticket_number}_Report_Data.pdf"
         response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename=\"{filename}\"'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response

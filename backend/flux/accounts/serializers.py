@@ -23,6 +23,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['department'] = user.department.name
         token['department_id'] = str(user.department.id)
         token['company'] = str(user.company.name)
+        token['company_id'] = str(user.company.id)
         token['company_logo'] = str(user.company.image_url()) if user.company.logo else None
         token["sub"] = str(user.id)
         return token

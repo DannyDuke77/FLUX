@@ -22,7 +22,8 @@ const ViewTicketNoteButton: React.FC<ViewTicketNoteButtonProps> = ({ log }) => {
             onClick={() => ticketNoteModal.open(log)}
             className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
         >
-          View more
+          View
+          <EyeIcon className="w-4 h-4" />
         </button>
     )
 }

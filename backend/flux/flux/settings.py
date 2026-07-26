@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ") + ["tickets.internal"]
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -114,12 +114,13 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
         "CONFIG": {
-            "hosts": [("redis", 6379)],
+            "hosts": ["redis://redis:6379/0"],
         },
     },
 }
+
 LOGIN_REDIRECT_URL = '/tickets/'
 ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/api/auth/login/'
 
@@ -254,10 +255,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = BASE_DIR / 'static' 
+
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'frontend_static'),
 ]
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/' 
 MEDIA_ROOT = BASE_DIR / 'media'

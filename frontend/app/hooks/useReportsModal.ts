@@ -4,6 +4,7 @@ export type UserType = {
     id: string;
     name: string;
     department_id: string;
+    company_id: string;
     is_admin: boolean;
     company: string;
 }

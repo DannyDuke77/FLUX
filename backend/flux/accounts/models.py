@@ -40,7 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseCompanyModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=150)
     
-    email = models.EmailField()
+    email = models.EmailField(unique=True, max_length=254)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     department = models.ForeignKey(Department, on_delete=models.PROTECT, null=True)
 

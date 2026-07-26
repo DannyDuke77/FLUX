@@ -7,17 +7,8 @@ import Modal from "./Modal";
 import apiService from "@/app/services/apiService";
 import { useRouter } from "next/navigation";
 import { 
-    AlertCircle, 
-    CheckCircle2, 
-    FileText, 
-    Layers, 
-    Send, 
-    AlertTriangle,
-    Clock,
-    X,
-    Upload,
-    NotebookPen,
-    Paperclip
+    AlertCircle, CheckCircle2, FileText, Layers, Send, 
+    AlertTriangle,Clock, X, Upload, NotebookPen, Paperclip
 } from "lucide-react";
 
 const DEBUG = process.env.NODE_ENV !== 'production';
@@ -133,7 +124,7 @@ const AddTicketModal = () => {
                     placeholder="Briefly describe the issue..."
                     value={title} 
                     onChange={(e) => setTitle(e.target.value)} 
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-500"
+                    className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-500"
                     required 
                 />
                 {errors.title && <p className="text-xs text-red-500"><AlertCircle className="w-4 h-4 inline-block mr-1" />{errors.title}</p>}
@@ -149,7 +140,7 @@ const AddTicketModal = () => {
                     <select 
                         value={assigned_to} 
                         onChange={(e) => setAssignedTo(e.target.value)} 
-                        className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
                         required
                     >
                         <option value="">Select Dept</option>
@@ -168,7 +159,7 @@ const AddTicketModal = () => {
                     <select 
                         value={priority} 
                         onChange={(e) => setPriority(e.target.value)} 
-                        className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
                         required
                     >
                         <option value="">Select Priority</option>
@@ -192,7 +183,7 @@ const AddTicketModal = () => {
                     placeholder="Provide all relevant details to help the team resolve this faster..."
                     value={description} 
                     onChange={(e) => setDescription(e.target.value)} 
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none placeholder:text-gray-500"
+                    className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none placeholder:text-gray-500"
                     required 
                 />
                 {errors.description && <p className="text-xs text-red-500"><AlertCircle className="w-4 h-4 inline-block mr-1" />{errors.description}</p>}
@@ -204,7 +195,7 @@ const AddTicketModal = () => {
                     Attach a file <span className="text-xs text-gray-500">(Max. 2MB)</span>
                 </p>
                 <label className="block">
-                      <div className="px-6 py-4 bg-gray-800 rounded-2xl border-3 border-dashed border border-gray-700 cursor-pointer transition hover:border-blue-500 focus-within:ring-2 focus-within:ring-black">
+                      <div className="p-6 bg-gray-900 rounded-2xl border-2 border-dashed border border-gray-700 cursor-pointer transition hover:border-blue-500 focus-within:ring-2 focus-within:ring-black">
                         <input
                             type="file"
                             accept="image/*"

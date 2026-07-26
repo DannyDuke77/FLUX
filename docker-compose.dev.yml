@@ -12,26 +12,29 @@ services:
       interval: 3s
       timeout: 3s
       retries: 10
-
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
+    networks:
+      - flux_network
 
   backend:
     build:
       context: ./backend/flux
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"  
     volumes:
       - ./backend/flux:/usr/src/flux
       - ./frontend/public:/usr/src/flux/frontend_static:ro
+      - django_media:/usr/src/flux/media
+      - django_static:/usr/src/flux/static
     ports:
       - "8000:8000"
     env_file:
-      - .env.dev
+      - .env
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - flux_network
 
   frontend:
     build:
@@ -44,6 +47,45 @@ services:
       - ./frontend/.env.local.dev
     ports:
       - "3000:3000"
+    networks:
+      - flux_network
+
+  redis:
+    image: redis:7
+    command: redis-server --tcp-keepalive 60 --timeout 0
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks:
+      - flux_network
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - django_static:/usr/src/flux/static:ro
+      - django_media:/usr/src/flux/media:ro
+    depends_on:
+      - frontend
+      - backend
+      - redis
+    networks:
+      - flux_network
+
+networks:
+  flux_network:
+    driver: bridge
 
 volumes:
   flux_dev_postgres_data:
+  django_static:
+  django_media:

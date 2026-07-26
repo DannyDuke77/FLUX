@@ -47,7 +47,7 @@ const Modal: React.FC<ModalProps> = ({ label, close, content, isOpen }) => {
                 ? 'opacity-100 scale-100 translate-y-0' 
                 : 'opacity-0 scale-95 translate-y-60'
             }`}>
-                <div className="bg-gray-900 border border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden shadow-black/50">
+                <div className="bg-slate-950 border border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden shadow-black/50">
                     {/* Header */}
                     <div className="border-b border-gray-800 px-6 py-4 flex items-center justify-between bg-gray-900/50">
                         <h3 className="text-xl font-bold text-white tracking-tight">

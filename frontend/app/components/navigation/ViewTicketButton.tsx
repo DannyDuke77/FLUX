@@ -1,6 +1,6 @@
 import useTicketDetailModal from "@/app/hooks/useTicketDetailModal";
 import { TicketType } from "@/app/hooks/useTicketDetailModal";
-import { EyeIcon } from "lucide-react";
+import { EyeIcon, ChevronRight } from "lucide-react";
 
 interface ViewTicketButtonProps {
     ticket: TicketType;
@@ -12,10 +12,9 @@ const ViewTicketButton: React.FC<ViewTicketButtonProps> = ({ ticket }) => {
     return (
         <button 
             onClick={() => ticketModal.open(ticket)}
-            className="flex items-center justify-center gap-2 text-sm bg-blue-600/50 hover:bg-blue-500 text-white px-2 py-2 rounded-xl transition-all shadow-lg shadow-blue-600/20 font-medium"
+            className="text-sm flex items-center gap-1 p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-700/10 transition-all rounded-full cursor-pointer"
         >
-          <EyeIcon className="w-5 h-5" />
-          View Ticket
+          <ChevronRight className="w-5 h-5" />
         </button>
     )
 }

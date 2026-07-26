@@ -5,6 +5,7 @@ import apiService from "@/app/services/apiService";
 import { useState } from "react";
 import Modal from "./Modal";
 import { AlertCircle, ChevronRight } from "lucide-react";
+import { TicketLogType } from "../navigation/ViewTicketNoteButton";
 
 
 const ResolutionModal = ({ onRefresh }: { onRefresh: () => void }) => {
@@ -21,8 +22,7 @@ const ResolutionModal = ({ onRefresh }: { onRefresh: () => void }) => {
         try {
             await apiService.patch(`/api/tickets/${modal.ticketId}/`, {
                 status: modal.newStatus,
-                // If closing without a note, send a default admin string
-                resolution_note: note.trim() || `Ticket ${modal.newStatus} by admin.`
+                resolution_note: note.trim()
             });
             onRefresh();
             modal.close();
@@ -34,6 +34,12 @@ const ResolutionModal = ({ onRefresh }: { onRefresh: () => void }) => {
         }
     };
 
+    const actionText: Record<string, string> = {
+        open: 'Re-Open',
+        resolved: 'Resolution',
+        closed: 'Closure',
+    };
+
     const content = (
         <div className="space-y-5">
             {/* Header/Instruction Area */}
@@ -41,7 +47,7 @@ const ResolutionModal = ({ onRefresh }: { onRefresh: () => void }) => {
                 <div className={`mt-0.5 p-1.5 rounded-lg ${isNoteRequired ? 'bg-amber-500/10' : 'bg-blue-500/10'}`}>
                     <AlertCircle className={`w-4 h-4 ${isNoteRequired ? 'text-amber-400' : 'text-blue-400'}`} />
                 </div>
-                <p className="text-sm leading-relaxed text-gray-300">
+                <p className="text-sm py-1.5 leading-relaxed text-gray-300">
                     {modal.newStatus === 'open' 
                         ? "Please provide a reason for re-opening this ticket. Explain what remains unresolved." 
                         : isNoteRequired 
@@ -86,8 +92,8 @@ const ResolutionModal = ({ onRefresh }: { onRefresh: () => void }) => {
                             <span>Processing...</span>
                         </>
                     ) : (
-                        <>
-                            <span>Confirm {modal.newStatus === 'resolved' ? 'Resolution' : 'Closure'}</span>
+                        <>  
+                            <span>Confirm {actionText[modal.newStatus]}</span>
                             <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                         </>
                     )}

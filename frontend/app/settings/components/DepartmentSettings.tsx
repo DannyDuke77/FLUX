@@ -16,8 +16,22 @@ import {
     X
 } from "lucide-react";
 
-const DepartmentSettings = () => {
-    const [departments, setDepartments] = useState<any[]>([]);
+type DepartmentType = {
+  id: string;
+  name: string;
+  company?: string;
+  is_active?: boolean;
+};
+
+type DepartmentsResponse = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: DepartmentType[];
+};
+
+const DepartmentSettings = ({ departments }: { departments: DepartmentsResponse }) => {
+    const [deptList, setDeptList] = useState<DepartmentType[]>(departments.results);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [departmentName, setDepartmentName] = useState("");
@@ -26,33 +40,11 @@ const DepartmentSettings = () => {
     
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalCount, setTotalCount] = useState(0);
-    const [hasNext, setHasNext] = useState(false);
-    const [hasPrev, setHasPrev] = useState(false);
+    let totalCount = deptList.length;
+    let hasNext = !!departments.next;
+    let hasPrev = !!departments.previous;
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-
-
-    const fetchDepartments = async (page: number = 1) => {
-        setLoading(true);
-        try {
-            const response = await apiService.get(`/api/departments/?page=${page}`);
-            setDepartments(response.results);
-            setTotalCount(response.count);
-            setHasNext(!!response.next);
-            setHasPrev(!!response.previous);
-            setCurrentPage(page);
-        } catch (error) {
-            console.error("Error fetching departments:", error);
-            setErrorMessage("Failed to load departments");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchDepartments();
-    }, []);
 
     const handleAddDepartment = async () => {
         if (!departmentName.trim()) return;
@@ -61,11 +53,12 @@ const DepartmentSettings = () => {
 
         const formData = new FormData();
         formData.append("name", departmentName);
+        formData.append("is_active", "true");
 
         try {
-            await apiService.post("/api/departments/", formData);
+            const createdDepartment = await apiService.post("/api/departments/", formData);
+            setDeptList(prev => [...prev, createdDepartment]);
             setDepartmentName("");
-            fetchDepartments(1);
         } catch (error: any) {
             console.error("Error adding department:", error);
             setErrorMessage(error.response?.data?.message || "Failed to add department");
@@ -81,10 +74,13 @@ const DepartmentSettings = () => {
         formData.append("name", editingName);
 
         try {
-            await apiService.patch(`/api/departments/${id}/`, formData);
+            const updatedDepartment = await apiService.patch(`/api/departments/${id}/`, formData);
+            setDeptList(prev =>
+                prev.map(d => (d.id === id ? updatedDepartment : d))
+            );
+
             setEditingId(null);
             setEditingName("");
-            fetchDepartments(currentPage);
         } catch (error: any) {
             console.error("Error editing department:", error);
             setErrorMessage(error.response?.data?.message || "Failed to update department");
@@ -96,14 +92,14 @@ const DepartmentSettings = () => {
         
         try {
             await apiService.patch(`/api/departments/${id}/`, { is_active: false });
-            fetchDepartments(currentPage);
+            setDeptList(prev => prev.filter(d => d.id !== id));
         } catch (error: any) {
             console.error("Error deleting department:", error);
             setErrorMessage(error.response?.data?.message || "Failed to delete department");
         }
     };
 
-    const startEdit = (dept: any) => {
+    const startEdit = (dept: DepartmentType) => {
         setEditingId(dept.id);
         setEditingName(dept.name);
     };
@@ -174,12 +170,7 @@ const DepartmentSettings = () => {
                 </div>
 
                 <div className="min-h-[400px]">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-400 mb-3" />
-                            <p className="text-sm text-gray-500">Loading departments...</p>
-                        </div>
-                    ) : departments.length === 0 ? (
+                    {deptList.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 text-center">
                             <div className="p-4 bg-gray-700/30 rounded-full mb-4">
                                 <Building2 className="w-8 h-8 text-gray-500" />
@@ -189,7 +180,7 @@ const DepartmentSettings = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {departments.map((dept) => (
+                            {deptList.map((dept : any) => (
                                 <div 
                                     key={dept.id} 
                                     className="group flex items-center justify-between p-3 rounded-xl bg-gray-800/20 border border-gray-700/50 hover:border-gray-600/50 hover:bg-gray-800/40 transition-all"
@@ -253,14 +244,14 @@ const DepartmentSettings = () => {
                         </p>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => fetchDepartments(currentPage - 1)}
+                                onClick={() => setCurrentPage(currentPage - 1)}
                                 disabled={!hasPrev || loading}
                                 className="p-2 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                             >
                                 <ChevronLeft className="w-4 h-4 text-gray-400" />
                             </button>
                             <button
-                                onClick={() => fetchDepartments(currentPage + 1)}
+                                onClick={() => setCurrentPage(currentPage + 1)}
                                 disabled={!hasNext || loading}
                                 className="p-2 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                             >

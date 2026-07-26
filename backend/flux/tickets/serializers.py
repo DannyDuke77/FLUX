@@ -3,47 +3,39 @@ from rest_framework import serializers
 from accounts.models import Department
 from .models import Ticket, TicketStatusLog
 
+
 class TicketStatusLogSerializer(serializers.ModelSerializer):
     changed_by_name = serializers.CharField(source='changed_by.name', read_only=True)
-    
+
     class Meta:
         model = TicketStatusLog
         fields = ['old_status', 'new_status', 'changed_by_name', 'changed_at', 'note']
 
+
 class TicketSerializer(serializers.ModelSerializer):
-    department_name = serializers.SerializerMethodField()
-    assigned_to_dept_name = serializers.SerializerMethodField()
-    created_by_name = serializers.SerializerMethodField()
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    assigned_to_dept_name = serializers.CharField(source='assigned_to.name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.name', read_only=True)
     status_logs = TicketStatusLogSerializer(many=True, read_only=True)
 
-    def get_department_name(self, obj):
-        return obj.department.name
-
-    def get_assigned_to_dept_name(self, obj):
-        return obj.assigned_to.name
-
-    def get_created_by_name(self, obj):
-        return obj.created_by.name
-    
     class Meta:
         model = Ticket
         fields = [
-            'id', 
+            'id',
             'ticket_number',
-            'title', 
-            'description', 
+            'title',
+            'description',
             'assigned_to',
             'department',
-            'department_name', 
-            'assigned_to_dept_name', 
-            'created_by_name', 
-            'status', 
-            'priority', 
+            'department_name',
+            'assigned_to_dept_name',
+            'created_by_name',
+            'status',
+            'priority',
             'image',
-            'created_at', 
+            'created_at',
             'updated_at',
             'status_logs',
-            
         ]
         read_only_fields = [
             'id',
@@ -60,15 +52,23 @@ class TicketSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         request = self.context.get('request')
+
+        if not request or not hasattr(request, 'user'):
+            return attrs
+
         user_company = getattr(request.user, 'company', None)
 
         department = attrs.get('department') or getattr(request.user, 'department', None)
         if department and department.company != user_company:
-            raise serializers.ValidationError("The department must belong to your company.")
+            raise serializers.ValidationError(
+                "The department must belong to your company."
+            )
 
         assigned_to = attrs.get('assigned_to')
         if assigned_to and assigned_to.company != user_company:
-            raise serializers.ValidationError("You cannot assign tickets to a department outside your company.")
+            raise serializers.ValidationError(
+                "You cannot assign tickets to a department outside your company."
+            )
 
         return attrs
 
@@ -77,12 +77,14 @@ class TicketSerializer(serializers.ModelSerializer):
             return value
 
         if value.size > 2 * 1024 * 1024:
-            raise serializers.ValidationError("Image too large. Max size is 2MB.")
+            raise serializers.ValidationError("Image too large. Max size is 2 MB.")
 
-        valid_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-
+        valid_types = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
         if value.content_type not in valid_types:
-            raise serializers.ValidationError("Invalid image format.")
+            raise serializers.ValidationError(
+                f"Unsupported image format '{value.content_type}'. "
+                f"Allowed: {', '.join(sorted(valid_types))}."
+            )
 
         return value
 
@@ -90,13 +92,11 @@ class TicketSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not isinstance(value, Department):
             raise serializers.ValidationError("Assigned department is invalid.")
-        
-        user_department = getattr(request.user, 'department', None)
-        if user_department and value == user_department:
-            raise serializers.ValidationError("You cannot assign a ticket to your own department.")
-        
-        return value
 
-    def create(self, validated_data):
-        return super().create(validated_data)
-        
+        user_department = getattr(request.user, 'department', None) if request else None
+        if user_department and value == user_department:
+            raise serializers.ValidationError(
+                "You cannot assign a ticket to your own department."
+            )
+
+        return value
